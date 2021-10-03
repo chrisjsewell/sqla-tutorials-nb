@@ -1,3 +1,14 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (unified-tutorial)=
 
 # SQLAlchemy 1.4 / 2.0 Tutorial
@@ -109,18 +120,16 @@ further_reading
 
 ### Version Check
 
-This tutorial is written using a system called [doctest](https://docs.python.org/3/library/doctest.html). All of the code excerpts
-written with a `>>>` are actually run as part of SQLAlchemy's test suite, and
-the reader is invited to work with the code examples given in real time with
-their own Python interpreter.
-
 If running the examples, it is advised that the reader performs a quick check to
-verify that we are on  **version 1.4** of SQLAlchemy:
+verify that we are on  **version 1.4** of SQLAlchemy.
+The SQLite version should also preferably by [version 3.25](https://www.sqlite.org/releaselog/3_25_0.html) or higher.
 
-```python
->>> import sqlalchemy
->>> sqlalchemy.__version__  # doctest: +SKIP
-1.4.0
+```{code-cell} ipython3
+import sqlalchemy
+import sqlite3
+
+print(sqlalchemy.__version__)
+print(sqlite3.sqlite_version)
 ```
 
 <!--
