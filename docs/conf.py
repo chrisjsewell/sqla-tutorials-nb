@@ -9,7 +9,6 @@ extensions = ["myst_nb", "sphinx.ext.intersphinx", "sphinx_copybutton", "sphinx_
 
 myst_enable_extensions = ["colon_fence"]
 execution_show_tb = "READTHEDOCS" in os.environ
-execution_allow_errors = True
 
 intersphinx_mapping = {
     "sqlalchemy": ("https://docs.sqlalchemy.org/en/14/", None),

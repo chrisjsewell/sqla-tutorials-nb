@@ -1268,7 +1268,7 @@ A common function used with window functions is the `row_number()` function
 which simply counts rows. We may partition this row count against user name to
 number the email addresses of individual users.
 
-:::{note}
+:::{important}
 Window functions only available in SQLite version [3.25](https://www.sqlite.org/releaselog/3_25_0.html) or newer.
 :::
 
@@ -1338,6 +1338,8 @@ particular subset of rows compared to the total range of rows returned, availabl
 using the {meth}`~sqlalchemy.sql.functions.FunctionElement.filter` method:
 
 ```{code-cell} ipython3
+:tags: [raises-exception, hide-output]
+
 stmt = select(
     func.count(address_table.c.email_address).filter(user_table.c.name == 'sandy'),
     func.count(address_table.c.email_address).filter(user_table.c.name == 'spongebob')
