@@ -1,7 +1,7 @@
 """Sphinx configuration"""
 import os
 
-project = "SQLAlchemy Tutorial"
+project = "SQLAlchemy 1.4/2.0 Tutorial"
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
