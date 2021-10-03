@@ -32,6 +32,7 @@ Notebook based 1.4 / 2.0 Tutorial
 
 This tutorial is a mirror of <https://github.com/sqlalchemy/sqlalchemy/tree/master/doc/build/tutorial>,
 converted to use Jupyter Notebooks for interactive exploration.
+Use the {octicon}`rocket` dropdown at the top of the page to launch interactive sessions.
 
 The new SQLAlchemy Tutorial is now integrated between Core and ORM and
 serves as a unified introduction to SQLAlchemy as a whole.   In the new
