@@ -30,7 +30,7 @@ Notebook based 1.4 / 2.0 Tutorial
 
 :::{admonition} About this document
 
-This tutorial is a mirror of <https://github.com/sqlalchemy/sqlalchemy/tree/master/doc/build/tutorial>,
+This tutorial is a mirror of <https://docs.sqlalchemy.org/en/14/tutorial/>,
 converted to use Jupyter Notebooks for interactive exploration.
 Use the {octicon}`rocket` dropdown at the top of the page to launch interactive sessions.
 
