@@ -1266,9 +1266,15 @@ is the {class}`~sqlalchemy.sql.expression.Over` construct.
 
 A common function used with window functions is the `row_number()` function
 which simply counts rows. We may partition this row count against user name to
-number the email addresses of individual users:
+number the email addresses of individual users.
+
+:::{note}
+`ROW_NUMBER()` is only available in SQLite version 3.25 or newer.
+:::
 
 ```{code-cell} ipython3
+:tags: [raises-exception]
+
 stmt = select(
     func.row_number().over(partition_by=user_table.c.name),
     user_table.c.name,
