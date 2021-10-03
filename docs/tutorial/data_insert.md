@@ -1,11 +1,21 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (sqlatutorial:core-insert)=
 
 # Inserting Rows with Core
 
-When using Core, a SQL INSERT statement is generated using the
-{func}`~sqlalchemy.sql.expression.insert` function - this function generates a new instance of
-{class}`~sqlalchemy.sql.expression.Insert` which represents an INSERT statement in SQL, that adds
-new data into a table.
+When using Core, a SQL INSERT statement is generated using the {func}`~sqlalchemy.sql.expression.insert` function -
+this function generates a new instance of {class}`~sqlalchemy.sql.expression.Insert` which represents an INSERT statement in SQL,
+that adds new data into a table.
 
 :::{div} orm-header
 
@@ -17,23 +27,47 @@ The more ORM-focused sections later starting at {ref}`sqlatutorial:inserting-orm
 subsequent to the Expression Language sections introduce this.
 :::
 
+```{code-cell} ipython3
+:tags: [hide-output]
+
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, ForeignKey
+
+metadata = MetaData()
+user_table = Table(
+    "user_account",
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String(30)),
+    Column('fullname', String)
+)
+address_table = Table(
+    "address",
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_id', ForeignKey('user_account.id'), nullable=False),
+    Column('email_address', String, nullable=False)
+)
+
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+metadata.create_all(engine)
+```
+
 ## The insert() SQL Expression Construct
 
 A simple example of {class}`~sqlalchemy.sql.expression.Insert` illustrating the target table
 and the VALUES clause at once:
 
-```
->>> from sqlalchemy import insert
->>> stmt = insert(user_table).values(name='spongebob', fullname="Spongebob Squarepants")
+```{code-cell} ipython3
+from sqlalchemy import insert
+stmt = insert(user_table).values(name='spongebob', fullname="Spongebob Squarepants")
 ```
 
 The above `stmt` variable is an instance of {class}`~sqlalchemy.sql.expression.Insert`.  Most
 SQL expressions can be stringified in place as a means to see the general
 form of what's being produced:
 
-```
->>> print(stmt)
-{opensql}INSERT INTO user_account (name, fullname) VALUES (:name, :fullname)
+```{code-cell} ipython3
+print(stmt)
 ```
 
 The stringified form is created by producing a {class}`~sqlalchemy.engine.Compiled` form
@@ -41,8 +75,8 @@ of the object which includes a database-specific string SQL representation of
 the statement; we can acquire this object directly using the
 {meth}`~sqlalchemy.sql.expression.ClauseElement.compile` method:
 
-```
->>> compiled = stmt.compile()
+```{code-cell} ipython3
+compiled = stmt.compile()
 ```
 
 Our {class}`~sqlalchemy.sql.expression.Insert` construct is an example of a "parameterized"
@@ -50,9 +84,8 @@ construct, illustrated previously at {ref}`sqlatutorial:sending-parameters`; to
 view the `name` and `fullname` {term}`bound parameters`, these are
 available from the {class}`~sqlalchemy.engine.Compiled` construct as well:
 
-```
->>> compiled.params
-{'name': 'spongebob', 'fullname': 'Spongebob Squarepants'}
+```{code-cell} ipython3
+compiled.params
 ```
 
 ## Executing the Statement
@@ -61,7 +94,7 @@ Invoking the statement we can INSERT a row into `user_table`.
 The INSERT SQL as well as the bundled parameters can be seen in the
 SQL logging:
 
-```python
+```{code-cell} ipython3
 with engine.connect() as conn:
     result = conn.execute(stmt)
     conn.commit()
@@ -75,7 +108,7 @@ case the first row in a SQLite database will normally return `1` for the
 first integer primary key value, which we can acquire using the
 {attr}`~sqlalchemy.engine.CursorResult.inserted_primary_key` accessor:
 
-```python
+```{code-cell} ipython3
 result.inserted_primary_key
 ```
 
@@ -105,7 +138,7 @@ automatically from the parameters passed to the
 {meth}`~sqlalchemy.future.Connection.execute` method; below we INSERT two more rows to
 illustrate this:
 
-```python
+```{code-cell} ipython3
 with engine.connect() as conn:
     result = conn.execute(
         insert(user_table),
@@ -153,23 +186,26 @@ Most Alchemists will simply use the ORM
 which takes care of things like this for us.
 
 ```python
->>> from sqlalchemy import select, bindparam
->>> scalar_subquery = (
-...     select(user_table.c.id).
-...     where(user_table.c.name==bindparam('username')).
-...     scalar_subquery()
-... )
+from sqlalchemy import select, bindparam
+scalar_subquery = (
+    select(user_table.c.id).
+    where(user_table.c.name==bindparam('username')).
+    scalar_subquery()
+)
 
->>> with engine.connect() as conn:
-...     result = conn.execute(
-...         insert(address_table).values(user_id=scalar_subquery),
-...         [
-...             {"username": 'spongebob', "email_address": "spongebob@sqlalchemy.org"},
-...             {"username": 'sandy', "email_address": "sandy@sqlalchemy.org"},
-...             {"username": 'sandy', "email_address": "sandy@squirrelpower.org"},
-...         ]
-...     )
-...     conn.commit()
+with engine.connect() as conn:
+    result = conn.execute(
+        insert(address_table).values(user_id=scalar_subquery),
+        [
+            {"username": 'spongebob', "email_address": "spongebob@sqlalchemy.org"},
+            {"username": 'sandy', "email_address": "sandy@sqlalchemy.org"},
+            {"username": 'sandy', "email_address": "sandy@squirrelpower.org"},
+        ]
+    )
+    conn.commit()
+```
+
+```
 {opensql}BEGIN (implicit)
 INSERT INTO address (user_id, email_address) VALUES ((SELECT user_account.id
 FROM user_account
@@ -189,15 +225,14 @@ The {class}`~sqlalchemy.sql.expression.Insert` construct can compose
 an INSERT that gets rows directly from a SELECT using the {meth}`~sqlalchemy.sql.expression.Insert.from_select`
 method:
 
-```
->>> select_stmt = select(user_table.c.id, user_table.c.name + "@aol.com")
->>> insert_stmt = insert(address_table).from_select(
-...     ["user_id", "email_address"], select_stmt
-... )
->>> print(insert_stmt)
-{opensql}INSERT INTO address (user_id, email_address)
-SELECT user_account.id, user_account.name || :name_1 AS anon_1
-FROM user_account
+```{code-cell} ipython3
+from sqlalchemy import select
+
+select_stmt = select(user_table.c.id, user_table.c.name + "@aol.com")
+insert_stmt = insert(address_table).from_select(
+    ["user_id", "email_address"], select_stmt
+)
+print(insert_stmt)
 ```
 
 (sqlatutorial:insert-returning)=
@@ -212,27 +247,21 @@ method; in this case, the {class}`~sqlalchemy.engine.Result`
 object that's returned when the statement is executed has rows which
 can be fetched:
 
-```
->>> insert_stmt = insert(address_table).returning(address_table.c.id, address_table.c.email_address)
->>> print(insert_stmt)
-{opensql}INSERT INTO address (id, user_id, email_address)
-VALUES (:id, :user_id, :email_address)
-RETURNING address.id, address.email_address
+```{code-cell} ipython3
+insert_stmt = insert(address_table).returning(address_table.c.id, address_table.c.email_address)
+print(insert_stmt)
 ```
 
 It can also be combined with {meth}`~sqlalchemy.sql.expression.Insert.from_select`,
 as in the example below that builds upon the example stated in
 {ref}`sqlatutorial:insert-from-select`:
 
-```
->>> select_stmt = select(user_table.c.id, user_table.c.name + "@aol.com")
->>> insert_stmt = insert(address_table).from_select(
-...     ["user_id", "email_address"], select_stmt
-... )
->>> print(insert_stmt.returning(address_table.c.id, address_table.c.email_address))
-{opensql}INSERT INTO address (user_id, email_address)
-SELECT user_account.id, user_account.name || :name_1 AS anon_1
-FROM user_account RETURNING address.id, address.email_address
+```{code-cell} ipython3
+select_stmt = select(user_table.c.id, user_table.c.name + "@aol.com")
+insert_stmt = insert(address_table).from_select(
+    ["user_id", "email_address"], select_stmt
+)
+print(insert_stmt.returning(address_table.c.id, address_table.c.email_address))
 ```
 
 :::{tip}

@@ -1,3 +1,14 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (sqlatutorial:orm-related-objects)=
 
 # Working with Related Objects
@@ -9,16 +20,15 @@ made use of a construct called {func}`~sqlalchemy.orm.relationship`.  This const
 defines a linkage between two different mapped classes, or from a mapped class
 to itself, the latter of which is called a **self-referential** relationship.
 
-To describe the basic idea of {func}`~sqlalchemy.orm.relationship`, first we'll review
-the mapping in short form, omitting the {class}`~sqlalchemy.schema.Column` mappings
-and other directives:
+To describe the basic idea of {func}`~sqlalchemy.orm.relationship`, first we'll review the mapping in short form,
+omitting the {class}`~sqlalchemy.schema.Column` mappings and other directives:
 
 ```python
 from sqlalchemy.orm import relationship
 class User(Base):
     __tablename__ = 'user_account'
 
-    # ... Column mappings
+    # Column mappings
 
     addresses = relationship("Address", back_populates="user")
 
@@ -26,7 +36,7 @@ class User(Base):
 class Address(Base):
     __tablename__ = 'address'
 
-    # ... Column mappings
+    # Column mappings
 
     user = relationship("User", back_populates="addresses")
 ```
@@ -51,16 +61,73 @@ the other name, establishes that each of these two {func}`~sqlalchemy.orm.relati
 constructs should be considered to be complimentary to each other; we will see
 how this plays out in the next section.
 
+```{code-cell} ipython3
+:tags: [hide-output]
+
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, ForeignKey, select, insert, update, delete
+from sqlalchemy.orm import aliased, declarative_base, relationship, Session
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = 'user_account'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(30))
+    fullname = Column(String)
+
+    addresses = relationship("Address", back_populates="user")
+
+    def __repr__(self):
+        return f"User({self.name!r}, {self.fullname!r})"
+
+class Address(Base):
+    __tablename__ = 'address'
+
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('user_account.id'))
+
+    user = relationship("User", back_populates="addresses")
+
+    def __repr__(self):
+        return f"Address({self.email_address!r})"
+
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+Base.metadata.create_all(engine)
+
+with engine.begin() as conn:
+    conn.execute(
+        insert(User),
+        [
+            {"id": 1, "name": "spongebob", "fullname": "Spongebob Squarepants"},
+            {"id": 2, "name": "sandy", "fullname": "Sandy Cheeks"},
+            {"id": 3, "name": "patrick", "fullname": "Patrick Star"}
+        ]
+    )
+with engine.begin() as conn:
+    conn.execute(
+        insert(Address),
+        [
+            {"user_id": 1, "email_address": "spongebob@sqlalchemy.org"},
+            {"user_id": 2, "email_address": "sandy@sqlalchemy.org"},
+            {"user_id": 2, "email_address": "sandy@squirrelpower.org"},
+        ]
+    )
+
+  
+session = Session(engine)
+```
+
 ## Persisting and Loading Relationships
 
 We can start by illustrating what {func}`~sqlalchemy.orm.relationship` does to instances
 of objects.   If we make a new `User` object, we can note that there is a
 Python list when we access the `.addresses` element:
 
-```
->>> u1 = User(name='pkrabs', fullname='Pearl Krabs')
->>> u1.addresses
-[]
+```{code-cell} ipython3
+u1 = User(name='pkrabs', fullname='Pearl Krabs')
+u1.addresses
 ```
 
 This object is a SQLAlchemy-specific version of Python `list` which
@@ -80,17 +147,16 @@ The collection is specific to the `Address` class which is the only type
 of Python object that may be persisted within it.  Using the `list.append()`
 method we may add an `Address` object:
 
-```
->>> a1 = Address(email_address="pearl.krabs@gmail.com")
->>> u1.addresses.append(a1)
+```{code-cell} ipython3
+a1 = Address(email_address="pearl.krabs@gmail.com")
+u1.addresses.append(a1)
 ```
 
 At this point, the `u1.addresses` collection as expected contains the
 new `Address` object:
 
-```
->>> u1.addresses
-[Address(id=None, email_address='pearl.krabs@gmail.com')]
+```{code-cell} ipython3
+u1.addresses
 ```
 
 As we associated the `Address` object with the `User.addresses` collection
@@ -100,9 +166,8 @@ relationship, such that we can navigate not only from the `User` object
 to the `Address` object, we can also navigate from the `Address` object
 back to the "parent" `User` object:
 
-```
->>> a1.user
-User(id=None, name='pkrabs', fullname='Pearl Krabs')
+```{code-cell} ipython3
+a1.user
 ```
 
 This synchronization occurred as a result of our use of the
@@ -114,10 +179,9 @@ direction, which is that if we create another `Address` object and assign
 to its `Address.user` attribute, that `Address` becomes part of the
 `User.addresses` collection on that `User` object:
 
-```
->>> a2 = Address(email_address="pearl@aol.com", user=u1)
->>> u1.addresses
-[Address(id=None, email_address='pearl.krabs@gmail.com'), Address(id=None, email_address='pearl@aol.com')]
+```{code-cell} ipython3
+a2 = Address(email_address="pearl@aol.com", user=u1)
+u1.addresses
 ```
 
 We actually made use of the `user` parameter as a keyword argument in the
@@ -125,9 +189,9 @@ We actually made use of the `user` parameter as a keyword argument in the
 that was declared on the `Address` class.  It is equivalent to assignment
 of the `Address.user` attribute after the fact:
 
-```
+```{code-cell} ipython3
 # equivalent effect as a2 = Address(user=u1)
->>> a2.user = u1
+a2.user = u1
 ```
 
 ### Cascading Objects into the Session
@@ -142,14 +206,9 @@ We make use of the {class}`~sqlalchemy.orm.Session` that's still ongoing, and no
 when we apply the {meth}`~sqlalchemy.orm.Session.add` method to the lead `User` object,
 the related `Address` object also gets added to that same {class}`~sqlalchemy.orm.Session`:
 
-```
->>> session.add(u1)
->>> u1 in session
-True
->>> a1 in session
-True
->>> a2 in session
-True
+```{code-cell} ipython3
+session.add(u1)
+u1 in session, a1 in session, a2 in session
 ```
 
 The above behavior, where the {class}`~sqlalchemy.orm.Session` received a `User` object,
@@ -165,11 +224,9 @@ and `a2` objects have an attribute called `user_id` which refers to the
 referring to the `user_account.id` column; these are also `None` as the
 objects are not yet associated with a real database row:
 
-```
->>> print(u1.id)
-None
->>> print(a1.user_id)
-None
+```{code-cell} ipython3
+print(u1.id)
+print(a1.user_id)
 ```
 
 It's at this stage that we can see the very great utility that the unit of
@@ -189,15 +246,8 @@ transaction all steps invoke in the correct order, and furthermore the
 newly generated primary key of the `user_account` row is applied to the
 `address.user_id` column appropriately:
 
-```python
->>> session.commit()
-{opensql}INSERT INTO user_account (name, fullname) VALUES (?, ?)
-[...] ('pkrabs', 'Pearl Krabs')
-INSERT INTO address (email_address, user_id) VALUES (?, ?)
-[...] ('pearl.krabs@gmail.com', 6)
-INSERT INTO address (email_address, user_id) VALUES (?, ?)
-[...] ('pearl@aol.com', 6)
-COMMIT
+```{code-cell} ipython3
+session.commit()
 ```
 
 (sqlatutorial:loading-relationships)=
@@ -213,15 +263,8 @@ When we next access an attribute on these objects, we'll see the SELECT
 emitted for the primary attributes of the row, such as when we view the
 newly generated primary key for the `u1` object:
 
-```python
->>> u1.id
-{opensql}BEGIN (implicit)
-SELECT user_account.id AS user_account_id, user_account.name AS user_account_name,
-user_account.fullname AS user_account_fullname
-FROM user_account
-WHERE user_account.id = ?
-[...] (6,){stop}
-6
+```{code-cell} ipython3
+u1.id
 ```
 
 The `u1` `User` object now has a persistent collection `User.addresses`
@@ -229,14 +272,8 @@ that we may also access.   As this collection consists of an additional set
 of rows from the `address` table, when we access this collection as well
 we again see a {term}`lazy load` emitted in order to retrieve the objects:
 
-```python
->>> u1.addresses
-{opensql}SELECT address.id AS address_id, address.email_address AS address_email_address,
-address.user_id AS address_user_id
-FROM address
-WHERE ? = address.user_id
-[...] (6,){stop}
-[Address(id=4, email_address='pearl.krabs@gmail.com'), Address(id=5, email_address='pearl@aol.com')]
+```{code-cell} ipython3
+u1.addresses
 ```
 
 Collections and related attributes in the SQLAlchemy ORM are persistent in
@@ -245,9 +282,8 @@ until that collection or attribute is {term}`expired`.    We may access
 `u1.addresses` again as well as add or remove items and this will not
 incur any new SQL calls:
 
-```
->>> u1.addresses
-[Address(id=4, email_address='pearl.krabs@gmail.com'), Address(id=5, email_address='pearl@aol.com')]
+```{code-cell} ipython3
+u1.addresses
 ```
 
 While the loading emitted by lazy loading can quickly become expensive if
@@ -259,11 +295,12 @@ these are in fact the same
 already, so we're done loading all attributes in this particular object
 graph:
 
+```{code-cell} ipython3
+a1
 ```
->>> a1
-Address(id=4, email_address='pearl.krabs@gmail.com')
->>> a2
-Address(id=5, email_address='pearl@aol.com')
+
+```{code-cell} ipython3
+a2
 ```
 
 The issue of how relationships load, or not, is an entire subject onto
@@ -302,14 +339,12 @@ corresponding to the {func}`~sqlalchemy.orm.relationship` may be passed as the *
 argument** to {meth}`~sqlalchemy.sql.expression.Select.join`, where it serves to indicate both the
 right side of the join as well as the ON clause at once:
 
-```
->>> print(
-...     select(Address.email_address).
-...     select_from(User).
-...     join(User.addresses)
-... )
-{opensql}SELECT address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
+```{code-cell} ipython3
+print(
+    select(Address.email_address).
+    select_from(User).
+    join(User.addresses)
+)
 ```
 
 The presence of an ORM {func}`~sqlalchemy.orm.relationship` on a mapping is not used
@@ -320,13 +355,11 @@ ON clause, it works because of the {class}`~sqlalchemy.schema.ForeignKeyConstrai
 between the two mapped {class}`~sqlalchemy.schema.Table` objects, not because of the
 {func}`~sqlalchemy.orm.relationship` objects on the `User` and `Address` classes:
 
-```
->>> print(
-...    select(Address.email_address).
-...    join_from(User, Address)
-... )
-{opensql}SELECT address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
+```{code-cell} ipython3
+print(
+   select(Address.email_address).
+   join_from(User, Address)
+)
 ```
 
 (sqlatutorial:joining-relationships-aliased)=
@@ -337,39 +370,28 @@ In the section {ref}`sqlatutorial:orm-entity-aliases` we introduced the
 {func}`~sqlalchemy.orm.aliased` construct, which is used to apply a SQL alias to an
 ORM entity.   When using a {func}`~sqlalchemy.orm.relationship` to help construct SQL JOIN, the
 use case where the target of the join is to be an {func}`~sqlalchemy.orm.aliased` is suited
-by making use of the {meth}`~sqlalchemy.orm.PropComparator.of_type` modifier.    To
-demonstrate we will construct the same join illustrated at {ref}`sqlatutorial:orm-entity-aliases`
-using the {func}`~sqlalchemy.orm.relationship` attributes to join instead:
+by making use of the {meth}`~sqlalchemy.orm.PropComparator.of_type` modifier.    
+To demonstrate we will construct the same join illustrated at {ref}`sqlatutorial:orm-entity-aliases` using the {func}`~sqlalchemy.orm.relationship` attributes to join instead:
 
-```
->>> print(
-...        select(User).
-...        join(User.addresses.of_type(address_alias_1)).
-...        where(address_alias_1.email_address == 'patrick@aol.com').
-...        join(User.addresses.of_type(address_alias_2)).
-...        where(address_alias_2.email_address == 'patrick@gmail.com')
-...    )
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-JOIN address AS address_1 ON user_account.id = address_1.user_id
-JOIN address AS address_2 ON user_account.id = address_2.user_id
-WHERE address_1.email_address = :email_address_1
-AND address_2.email_address = :email_address_2
+```python
+print(
+       select(User).
+       join(User.addresses.of_type(address_alias_1)).
+       where(address_alias_1.email_address == 'patrick@aol.com').
+       join(User.addresses.of_type(address_alias_2)).
+       where(address_alias_2.email_address == 'patrick@gmail.com')
+   )
 ```
 
-To make use of a {func}`~sqlalchemy.orm.relationship` to construct a join **from** an
-aliased entity, the attribute is available from the {func}`~sqlalchemy.orm.aliased`
-construct directly:
+To make use of a {func}`~sqlalchemy.orm.relationship` to construct a join **from** an aliased entity,
+the attribute is available from the {func}`~sqlalchemy.orm.aliased` construct directly:
 
-```
->>> user_alias_1 = aliased(User)
->>> print(
-...     select(user_alias_1.name).
-...     join(user_alias_1.addresses)
-... )
-{opensql}SELECT user_account_1.name
-FROM user_account AS user_account_1
-JOIN address ON user_account_1.id = address.user_id
+```{code-cell} ipython3
+user_alias_1 = aliased(User)
+print(
+    select(user_alias_1.name).
+    join(user_alias_1.addresses)
+)
 ```
 
 (sqlatutorial:joining-relationships-augmented)=
@@ -386,17 +408,12 @@ to the ON clause of the JOIN via AND.  For example if we wanted to
 JOIN from `User` to `Address` but also limit the ON criteria to only certain
 email addresses:
 
-```python
->>> stmt = (
-...   select(User.fullname).
-...   join(User.addresses.and_(Address.email_address == 'pearl.krabs@gmail.com'))
-... )
->>> session.execute(stmt).all()
-{opensql}SELECT user_account.fullname
-FROM user_account
-JOIN address ON user_account.id = address.user_id AND address.email_address = ?
-[...] ('pearl.krabs@gmail.com',){stop}
-[('Pearl Krabs',)]
+```{code-cell} ipython3
+stmt = (
+  select(User.fullname).
+  join(User.addresses.and_(Address.email_address == 'pearl.krabs@gmail.com'))
+)
+session.execute(stmt).all()
 ```
 
 (sqlatutorial:relationship-exists)=
@@ -414,19 +431,12 @@ the `address` table that correlates back to the `user_account` table
 can be produced using {meth}`~sqlalchemy.orm.PropComparator.any`.  This method accepts
 an optional WHERE criteria to limit the rows matched by the subquery:
 
-```python
->>> stmt = (
-...   select(User.fullname).
-...   where(User.addresses.any(Address.email_address == 'pearl.krabs@gmail.com'))
-... )
->>> session.execute(stmt).all()
-{opensql}SELECT user_account.fullname
-FROM user_account
-WHERE EXISTS (SELECT 1
-FROM address
-WHERE user_account.id = address.user_id AND address.email_address = ?)
-[...] ('pearl.krabs@gmail.com',){stop}
-[('Pearl Krabs',)]
+```{code-cell} ipython3
+stmt = (
+  select(User.fullname).
+  where(User.addresses.any(Address.email_address == 'pearl.krabs@gmail.com'))
+)
+session.execute(stmt).all()
 ```
 
 As EXISTS tends to be more efficient for negative lookups, a common query
@@ -434,19 +444,12 @@ is to locate entities where there are no related entities present.  This
 is succinct using a phrase such as `~User.addresses.any()`, to select
 for `User` entities that have no related `Address` rows:
 
-```python
->>> stmt = (
-...   select(User.fullname).
-...   where(~User.addresses.any())
-... )
->>> session.execute(stmt).all()
-{opensql}SELECT user_account.fullname
-FROM user_account
-WHERE NOT (EXISTS (SELECT 1
-FROM address
-WHERE user_account.id = address.user_id))
-[...] (){stop}
-[('Patrick McStar',), ('Squidward Tentacles',), ('Eugene H. Krabs',)]
+```{code-cell} ipython3
+stmt = (
+  select(User.fullname).
+  where(~User.addresses.any())
+)
+session.execute(stmt).all()
 ```
 
 The {meth}`~sqlalchemy.orm.PropComparator.has` method works in mostly the same way as
@@ -454,19 +457,12 @@ The {meth}`~sqlalchemy.orm.PropComparator.has` method works in mostly the same w
 relationships, such as if we wanted to locate all `Address` objects
 which belonged to "pearl":
 
-```python
->>> stmt = (
-...   select(Address.email_address).
-...   where(Address.user.has(User.name=="pkrabs"))
-... )
->>> session.execute(stmt).all()
-{opensql}SELECT address.email_address
-FROM address
-WHERE EXISTS (SELECT 1
-FROM user_account
-WHERE user_account.id = address.user_id AND user_account.name = ?)
-[...] ('pkrabs',){stop}
-[('pearl.krabs@gmail.com',), ('pearl@aol.com',)]
+```{code-cell} ipython3
+stmt = (
+  select(Address.email_address).
+  where(Address.user.has(User.name=="pkrabs"))
+)
+session.execute(stmt).all()
 ```
 
 (sqlatutorial:relationship-operators)=
@@ -481,54 +477,34 @@ There are some additional varieties of SQL generation helpers that come with
   foreign key of the target entity matches the primary key value of the
   object given:
 
-  ```
-  >>> print(select(Address).where(Address.user == u1))
-  {opensql}SELECT address.id, address.email_address, address.user_id
-  FROM address
-  WHERE :param_1 = address.user_id
-  ```
-
-  %
+```{code-cell} ipython3
+print(select(Address).where(Address.user == u1))
+```
 
 - **many to one not equals comparison** - the not equals operator may also
   be used:
 
-  ```
-  >>> print(select(Address).where(Address.user != u1))
-  {opensql}SELECT address.id, address.email_address, address.user_id
-  FROM address
-  WHERE address.user_id != :user_id_1 OR address.user_id IS NULL
-  ```
-
-  %
+```{code-cell} ipython3
+print(select(Address).where(Address.user != u1))
+```
 
 - **object is contained in a one-to-many collection** - this is essentially
   the one-to-many version of the "equals" comparison, select rows where the
   primary key equals the value of the foreign key in a related object:
 
-  ```
-  >>> print(select(User).where(User.addresses.contains(a1)))
-  {opensql}SELECT user_account.id, user_account.name, user_account.fullname
-  FROM user_account
-  WHERE user_account.id = :param_1
-  ```
-
-  %
+```{code-cell} ipython3
+print(select(User).where(User.addresses.contains(a1)))
+```
 
 - **An object has a particular parent from a one-to-many perspective** - the
   {func}`~sqlalchemy.orm.with_parent` function produces a comparison that returns rows
   which are referred towards by a given parent, this is essentially the
   same as using the `==` operator with the many-to-one side:
 
-  ```
-  >>> from sqlalchemy.orm import with_parent
-  >>> print(select(Address).where(with_parent(u1, User.addresses)))
-  {opensql}SELECT address.id, address.email_address, address.user_id
-  FROM address
-  WHERE :param_1 = address.user_id
-  ```
-
-  %
+```{code-cell} ipython3
+from sqlalchemy.orm import with_parent
+print(select(Address).where(with_parent(u1, User.addresses)))
+```
 
 (sqlatutorial:orm-loader-strategies)=
 
@@ -547,8 +523,7 @@ spin off many additional queries that can add up (otherwise known as the
 {term}`N plus one problem`), and to make matters worse they are emitted
 implicitly.    These implicit queries may not be noticed, may cause errors
 when they are attempted after there's no longer a database tranasction
-available, or when using alternative concurrency patterns such as {ref}`asyncio
-<asyncio_toplevel>`, they actually won't work at all.
+available, or when using alternative concurrency patterns such as {ref}`asyncio <asyncio_toplevel>`, they actually won't work at all.
 
 At the same time, lazy loading is a vastly popular and useful pattern when it
 is compatible with the concurrency approach in use and isn't otherwise causing
@@ -617,27 +592,13 @@ objects; while we invoke {meth}`~sqlalchemy.orm.Session.execute` only once, give
 in fact two SELECT statements emitted, the second one being to fetch the
 related `Address` objects:
 
-```python
->>> from sqlalchemy.orm import selectinload
->>> stmt = (
-...   select(User).options(selectinload(User.addresses)).order_by(User.id)
-... )
->>> for row in session.execute(stmt):
-...     print(f"{row.User.name}  ({', '.join(a.email_address for a in row.User.addresses)})")
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account ORDER BY user_account.id
-[...] ()
-SELECT address.user_id AS address_user_id, address.id AS address_id,
-address.email_address AS address_email_address
-FROM address
-WHERE address.user_id IN (?, ?, ?, ?, ?, ?)
-[...] (1, 2, 3, 4, 5, 6){stop}
-spongebob  (spongebob@sqlalchemy.org)
-sandy  (sandy@sqlalchemy.org, sandy@squirrelpower.org)
-patrick  ()
-squidward  ()
-ehkrabs  ()
-pkrabs  (pearl.krabs@gmail.com, pearl@aol.com)
+```{code-cell} ipython3
+from sqlalchemy.orm import selectinload
+stmt = (
+  select(User).options(selectinload(User.addresses)).order_by(User.id)
+)
+for row in session.execute(stmt):
+    print(f"{row.User.name}  ({', '.join(a.email_address for a in row.User.addresses)})")
 ```
 
 :::{seealso}
@@ -659,24 +620,13 @@ so that an inner join instead of an outer join may be used for a case such
 as below where we know that all `Address` objects have an associated
 `User`:
 
-```python
->>> from sqlalchemy.orm import joinedload
->>> stmt = (
-...   select(Address).options(joinedload(Address.user, innerjoin=True)).order_by(Address.id)
-... )
->>> for row in session.execute(stmt):
-...     print(f"{row.Address.email_address} {row.Address.user.name}")
-{opensql}SELECT address.id, address.email_address, address.user_id, user_account_1.id AS id_1,
-user_account_1.name, user_account_1.fullname
-FROM address
-JOIN user_account AS user_account_1 ON user_account_1.id = address.user_id
-ORDER BY address.id
-[...] (){stop}
-spongebob@sqlalchemy.org spongebob
-sandy@sqlalchemy.org sandy
-sandy@squirrelpower.org sandy
-pearl.krabs@gmail.com pkrabs
-pearl@aol.com pkrabs
+```{code-cell} ipython3
+from sqlalchemy.orm import joinedload
+stmt = (
+  select(Address).options(joinedload(Address.user, innerjoin=True)).order_by(Address.id)
+)
+for row in session.execute(stmt):
+    print(f"{row.Address.email_address} {row.Address.user.name}")
 ```
 
 {func}`~sqlalchemy.orm.joinedload` also works for collections, meaning one-to-many relationships,
@@ -732,23 +682,16 @@ ourselves, and it instead only indicates that additional columns in the COLUMNS
 clause should be loaded into related attributes on each returned object, for
 example:
 
-```python
->>> from sqlalchemy.orm import contains_eager
->>> stmt = (
-...   select(Address).
-...   join(Address.user).
-...   where(User.name == 'pkrabs').
-...   options(contains_eager(Address.user)).order_by(Address.id)
-... )
->>> for row in session.execute(stmt):
-...     print(f"{row.Address.email_address} {row.Address.user.name}")
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname,
-address.id AS id_1, address.email_address, address.user_id
-FROM address JOIN user_account ON user_account.id = address.user_id
-WHERE user_account.name = ? ORDER BY address.id
-[...] ('pkrabs',){stop}
-pearl.krabs@gmail.com pkrabs
-pearl@aol.com pkrabs
+```{code-cell} ipython3
+from sqlalchemy.orm import contains_eager
+stmt = (
+  select(Address).
+  join(Address.user).
+  where(User.name == 'pkrabs').
+  options(contains_eager(Address.user)).order_by(Address.id)
+)
+for row in session.execute(stmt):
+    print(f"{row.Address.email_address} {row.Address.user.name}")
 ```
 
 Above, we both filtered the rows on `user_account.name` and also loaded
@@ -756,19 +699,14 @@ rows from `user_account` into the `Address.user` attribute of the returned
 rows.   If we had applied {func}`~sqlalchemy.orm.joinedload` separately, we would get a
 SQL query that unnecessarily joins twice:
 
-```
->>> stmt = (
-...   select(Address).
-...   join(Address.user).
-...   where(User.name == 'pkrabs').
-...   options(joinedload(Address.user)).order_by(Address.id)
-... )
->>> print(stmt)  # SELECT has a JOIN and LEFT OUTER JOIN unnecessarily
-{opensql}SELECT address.id, address.email_address, address.user_id,
-user_account_1.id AS id_1, user_account_1.name, user_account_1.fullname
-FROM address JOIN user_account ON user_account.id = address.user_id
-LEFT OUTER JOIN user_account AS user_account_1 ON user_account_1.id = address.user_id
-WHERE user_account.name = :name_1 ORDER BY address.id
+```{code-cell} ipython3
+stmt = (
+  select(Address).
+  join(Address.user).
+  where(User.name == 'pkrabs').
+  options(joinedload(Address.user)).order_by(Address.id)
+)
+print(stmt)  # SELECT has a JOIN and LEFT OUTER JOIN unnecessarily
 ```
 
 :::{seealso}
@@ -791,37 +729,22 @@ the email addresses with the `sqlalchemy.org` domain, we can apply
 {meth}`~sqlalchemy.orm.PropComparator.and_` to the argument passed to
 {func}`~sqlalchemy.orm.selectinload` to limit this criteria:
 
-```python
->>> from sqlalchemy.orm import selectinload
->>> stmt = (
-...   select(User).
-...   options(
-...       selectinload(
-...           User.addresses.and_(
-...             ~Address.email_address.endswith("sqlalchemy.org")
-...           )
-...       )
-...   ).
-...   order_by(User.id).
-...   execution_options(populate_existing=True)
-... )
->>> for row in session.execute(stmt):
-...     print(f"{row.User.name}  ({', '.join(a.email_address for a in row.User.addresses)})")
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account ORDER BY user_account.id
-[...] ()
-SELECT address.user_id AS address_user_id, address.id AS address_id,
-address.email_address AS address_email_address
-FROM address
-WHERE address.user_id IN (?, ?, ?, ?, ?, ?)
-AND (address.email_address NOT LIKE '%' || ?)
-[...] (1, 2, 3, 4, 5, 6, 'sqlalchemy.org'){stop}
-spongebob  ()
-sandy  (sandy@squirrelpower.org)
-patrick  ()
-squidward  ()
-ehkrabs  ()
-pkrabs  (pearl.krabs@gmail.com, pearl@aol.com)
+```{code-cell} ipython3
+from sqlalchemy.orm import selectinload
+stmt = (
+  select(User).
+  options(
+      selectinload(
+          User.addresses.and_(
+            ~Address.email_address.endswith("sqlalchemy.org")
+          )
+      )
+  ).
+  order_by(User.id).
+  execution_options(populate_existing=True)
+)
+for row in session.execute(stmt):
+    print(f"{row.User.name}  ({', '.join(a.email_address for a in row.User.addresses)})")
 ```
 
 A very important thing to note above is that a special option is added with
@@ -858,7 +781,7 @@ relationship will never try to emit SQL:
 class User(Base):
     __tablename__ = 'user_account'
 
-    # ... Column mappings
+    # Column mappings
 
     addresses = relationship("Address", back_populates="user", lazy="raise_on_sql")
 
@@ -866,7 +789,7 @@ class User(Base):
 class Address(Base):
     __tablename__ = 'address'
 
-    # ... Column mappings
+    # Column mappings
 
     user = relationship("User", back_populates="addresses", lazy="raise_on_sql")
 ```
@@ -875,8 +798,8 @@ Using such a mapping, the application is blocked from lazy loading,
 indicating that a particular query would need to specify a loader strategy:
 
 ```python
-u1 = s.execute(select(User)).scalars().first()
-u1.addresses
+>>> u1 = s.execute(select(User)).scalars().first()
+>>> u1.addresses
 sqlalchemy.exc.InvalidRequestError: 'User.addresses' is not available due to lazy='raise_on_sql'
 ```
 
@@ -884,7 +807,7 @@ The exception would indicate that this collection should be loaded up front
 instead:
 
 ```python
-u1 = s.execute(select(User).options(selectinload(User.addresses))).scalars().first()
+>>> u1 = s.execute(select(User).options(selectinload(User.addresses))).scalars().first()
 ```
 
 The `lazy="raise_on_sql"` option tries to be smart about many-to-one

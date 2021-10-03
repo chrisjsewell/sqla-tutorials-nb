@@ -14,3 +14,6 @@ This content is adapted from <https://github.com/sqlalchemy/sqlalchemy/tree/mast
 
 - targets uses `-` but refs used `_` and myst-parser didn't like this.
 - `rst-class` in `eval-rst` causes failure, unhandled pending node.
+- Merge stdout/stder
+- Better code hiding (title dropdown)
+- Download as notebook for markdown file

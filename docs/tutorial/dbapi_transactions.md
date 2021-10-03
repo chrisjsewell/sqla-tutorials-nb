@@ -1,3 +1,14 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (sqlatutorial:working-with-transactions)=
 
 # Working with Transactions and the DBAPI
@@ -7,6 +18,11 @@ to dive into the basic operation of an {class}`~sqlalchemy.future.Engine` and
 its primary interactive endpoints, the {class}`~sqlalchemy.future.Connection` and
 {class}`~sqlalchemy.engine.Result`.   We will additionally introduce the ORM's
 {term}`facade` for these objects, known as the {class}`~sqlalchemy.orm.Session`.
+
+```{code-cell} ipython3
+from sqlalchemy import create_engine
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+```
 
 :::{div} orm-header
 
@@ -31,9 +47,7 @@ day-to-day SQLAlchemy use is by far the exception rather than the rule for most
 tasks, even though it always remains fully available.
 
 <!-- 
-```{eval-rst}
 .. rst-class:: core-header
-``` 
 -->
 
 (sqlatutorial:getting-connection)=
@@ -53,17 +67,12 @@ Below we illustrate "Hello World", using a textual SQL statement.  Textual
 SQL is emitted using a construct called {func}`~sqlalchemy.sql.expression.text` that will be discussed
 in more detail later:
 
-```python
->>> from sqlalchemy import text
+```{code-cell} ipython3
+from sqlalchemy import text
 
->>> with engine.connect() as conn:
-...     result = conn.execute(text("select 'hello world'"))
-...     print(result.all())
-{opensql}BEGIN (implicit)
-select 'hello world'
-[...] ()
-{stop}[('hello world',)]
-{opensql}ROLLBACK{stop}
+with engine.connect() as conn:
+    result = conn.execute(text("select 'hello world'"))
+    print(result.all())
 ```
 
 In the above example, the context manager provided for a database connection
@@ -98,23 +107,15 @@ table and insert some data, and the transaction is then committed using
 the {meth}`~sqlalchemy.future.Connection.commit` method, invoked **inside** the block
 where we acquired the {class}`~sqlalchemy.future.Connection` object:
 
-```python
+```{code-cell} ipython3
 # "commit as you go"
->>> with engine.connect() as conn:
-...     conn.execute(text("CREATE TABLE some_table (x int, y int)"))
-...     conn.execute(
-...         text("INSERT INTO some_table (x, y) VALUES (:x, :y)"),
-...         [{"x": 1, "y": 1}, {"x": 2, "y": 4}]
-...     )
-...     conn.commit()
-{opensql}BEGIN (implicit)
-CREATE TABLE some_table (x int, y int)
-[...] ()
-<sqlalchemy.engine.cursor.CursorResult object at 0x...>
-INSERT INTO some_table (x, y) VALUES (?, ?)
-[...] ((1, 1), (2, 4))
-<sqlalchemy.engine.cursor.CursorResult object at 0x...>
-COMMIT
+with engine.connect() as conn:
+    conn.execute(text("CREATE TABLE some_table (x int, y int)"))
+    conn.execute(
+        text("INSERT INTO some_table (x, y) VALUES (:x, :y)"),
+        [{"x": 1, "y": 1}, {"x": 2, "y": 4}]
+    )
+    conn.commit()
 ```
 
 Above, we emitted two SQL statements that are generally transactional, a
@@ -137,18 +138,13 @@ enclose everything inside of a transaction with COMMIT at the end, assuming
 a successful block, or ROLLBACK in case of exception raise.  This style
 may be referred towards as **begin once**:
 
-```python
+```{code-cell} ipython3
 # "begin once"
->>> with engine.begin() as conn:
-...     conn.execute(
-...         text("INSERT INTO some_table (x, y) VALUES (:x, :y)"),
-...         [{"x": 6, "y": 8}, {"x": 9, "y": 10}]
-...     )
-{opensql}BEGIN (implicit)
-INSERT INTO some_table (x, y) VALUES (?, ?)
-[...] ((6, 8), (9, 10))
-<sqlalchemy.engine.cursor.CursorResult object at 0x...>
-COMMIT
+with engine.begin() as conn:
+    conn.execute(
+        text("INSERT INTO some_table (x, y) VALUES (:x, :y)"),
+        [{"x": 6, "y": 8}, {"x": 9, "y": 10}]
+    )
 ```
 
 "Begin once" style is often preferred as it is more succinct and indicates the
@@ -206,19 +202,11 @@ We'll first illustrate the {class}`~sqlalchemy.engine.Result` object more closel
 making use of the rows we've inserted previously, running a textual SELECT
 statement on the table we've created:
 
-```python
->>> with engine.connect() as conn:
-...     result = conn.execute(text("SELECT x, y FROM some_table"))
-...     for row in result:
-...         print(f"x: {row.x}  y: {row.y}")
-{opensql}BEGIN (implicit)
-SELECT x, y FROM some_table
-[...] ()
-{stop}x: 1  y: 1
-x: 2  y: 4
-x: 6  y: 8
-x: 9  y: 10
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+with engine.connect() as conn:
+    result = conn.execute(text("SELECT x, y FROM some_table"))
+    for row in result:
+        print(f"x: {row.x}  y: {row.y}")
 ```
 
 Above, the "SELECT" string we executed selected all rows from our table.
@@ -309,21 +297,14 @@ construct accepts these using a colon format "`:y`".   The actual value for
 "`:y`" is then passed as the second argument to
 {meth}`~sqlalchemy.future.Connection.execute` in the form of a dictionary:
 
-```python
->>> with engine.connect() as conn:
-...     result = conn.execute(
-...         text("SELECT x, y FROM some_table WHERE y > :y"),
-...         {"y": 2}
-...     )
-...     for row in result:
-...        print(f"x: {row.x}  y: {row.y}")
-{opensql}BEGIN (implicit)
-SELECT x, y FROM some_table WHERE y > ?
-[...] (2,)
-{stop}x: 2  y: 4
-x: 6  y: 8
-x: 9  y: 10
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+with engine.connect() as conn:
+    result = conn.execute(
+        text("SELECT x, y FROM some_table WHERE y > :y"),
+        {"y": 2}
+    )
+    for row in result:
+       print(f"x: {row.x}  y: {row.y}")
 ```
 
 In the logged SQL output, we can see that the bound parameter `:y` was
@@ -359,18 +340,13 @@ include a phrase like "RETURNING", we can send **multi params** to the
 instead of a single dictionary, thus allowing the single SQL statement to
 be invoked against each parameter set individually:
 
-```python
->>> with engine.connect() as conn:
-...     conn.execute(
-...         text("INSERT INTO some_table (x, y) VALUES (:x, :y)"),
-...         [{"x": 11, "y": 12}, {"x": 13, "y": 14}]
-...     )
-...     conn.commit()
-{opensql}BEGIN (implicit)
-INSERT INTO some_table (x, y) VALUES (?, ?)
-[...] ((11, 12), (13, 14))
-<sqlalchemy.engine.cursor.CursorResult object at 0x...>
-COMMIT
+```{code-cell} ipython3
+with engine.connect() as conn:
+    conn.execute(
+        text("INSERT INTO some_table (x, y) VALUES (:x, :y)"),
+        [{"x": 11, "y": 12}, {"x": 13, "y": 14}]
+    )
+    conn.commit()
 ```
 
 Behind the scenes, the {class}`~sqlalchemy.future.Connection` objects uses a DBAPI feature
@@ -413,20 +389,12 @@ SQL Expression Language supports this feature by using the
 returns a new copy of the SQL construct with additional state added, in this
 case the parameter values we want to pass along:
 
-```python
->>> stmt = text("SELECT x, y FROM some_table WHERE y > :y ORDER BY x, y").bindparams(y=6)
->>> with engine.connect() as conn:
-...     result = conn.execute(stmt)
-...     for row in result:
-...        print(f"x: {row.x}  y: {row.y}")
-{opensql}BEGIN (implicit)
-SELECT x, y FROM some_table WHERE y > ? ORDER BY x, y
-[...] (6,)
-{stop}x: 6  y: 8
-x: 9  y: 10
-x: 11  y: 12
-x: 13  y: 14
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+stmt = text("SELECT x, y FROM some_table WHERE y > :y ORDER BY x, y").bindparams(y=6)
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    for row in result:
+       print(f"x: {row.x}  y: {row.y}")
 ```
 
 The interesting thing to note above is that even though we passed only a single
@@ -464,22 +432,14 @@ here we will illustrate the most basic one that tracks exactly with how
 the {class}`~sqlalchemy.future.Connection` is used which is to construct it within
 a context manager:
 
-```python
->>> from sqlalchemy.orm import Session
+```{code-cell} ipython3
+from sqlalchemy.orm import Session
 
->>> stmt = text("SELECT x, y FROM some_table WHERE y > :y ORDER BY x, y").bindparams(y=6)
->>> with Session(engine) as session:
-...     result = session.execute(stmt)
-...     for row in result:
-...        print(f"x: {row.x}  y: {row.y}")
-{opensql}BEGIN (implicit)
-SELECT x, y FROM some_table WHERE y > ? ORDER BY x, y
-[...] (6,){stop}
-x: 6  y: 8
-x: 9  y: 10
-x: 11  y: 12
-x: 13  y: 14
-{opensql}ROLLBACK{stop}
+stmt = text("SELECT x, y FROM some_table WHERE y > :y ORDER BY x, y").bindparams(y=6)
+with Session(engine) as session:
+    result = session.execute(stmt)
+    for row in result:
+       print(f"x: {row.x}  y: {row.y}")
 ```
 
 The example above can be compared to the example in the preceding section
@@ -493,17 +453,13 @@ Also, like the {class}`~sqlalchemy.future.Connection`, the {class}`~sqlalchemy.o
 illustrated below using a textual UPDATE statement to alter some of
 our data:
 
-```python
->>> with Session(engine) as session:
-...     result = session.execute(
-...         text("UPDATE some_table SET y=:y WHERE x=:x"),
-...         [{"x": 9, "y":11}, {"x": 13, "y": 15}]
-...     )
-...     session.commit()
-{opensql}BEGIN (implicit)
-UPDATE some_table SET y=? WHERE x=?
-[...] ((11, 9), (15, 13))
-COMMIT{stop}
+```{code-cell} ipython3
+with Session(engine) as session:
+    result = session.execute(
+        text("UPDATE some_table SET y=:y WHERE x=:x"),
+        [{"x": 9, "y":11}, {"x": 13, "y": 15}]
+    )
+    session.commit()
 ```
 
 Above, we invoked an UPDATE statement using the bound-parameter, "executemany"

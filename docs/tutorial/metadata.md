@@ -1,3 +1,14 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (sqlatutorial:working-with-metadata)=
 
 # Working with Database Metadata
@@ -45,12 +56,12 @@ The two approaches can also be blended in many ways.
 Whether we will declare or reflect our tables, we start out with a collection
 that will be where we place our tables known as the {class}`~sqlalchemy.schema.MetaData`
 object.  This object is essentially a {term}`facade` around a Python dictionary
-that stores a series of {class}`~sqlalchemy.schema.Table` objects keyed to their string
-name.   Constructing this object looks like:
+that stores a series of {class}`~sqlalchemy.schema.Table` objects keyed to their string name.
+Constructing this object looks like:
 
-```
->>> from sqlalchemy import MetaData
->>> metadata = MetaData()
+```{code-cell} ipython3
+from sqlalchemy import MetaData
+metadata = MetaData()
 ```
 
 Having a single {class}`~sqlalchemy.schema.MetaData` object for an entire application is
@@ -68,15 +79,15 @@ representing a list of email addresses associated with rows in the `user`
 table.   We normally assign each {class}`~sqlalchemy.schema.Table` object to a variable
 that will be how we will refer to the table in application code:
 
-```
->>> from sqlalchemy import Table, Column, Integer, String
->>> user_table = Table(
-...     "user_account",
-...     metadata,
-...     Column('id', Integer, primary_key=True),
-...     Column('name', String(30)),
-...     Column('fullname', String)
-... )
+```{code-cell} ipython3
+from sqlalchemy import Table, Column, Integer, String
+user_table = Table(
+    "user_account",
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String(30)),
+    Column('fullname', String)
+)
 ```
 
 We can observe that the above {class}`~sqlalchemy.schema.Table` construct looks a lot like
@@ -93,13 +104,13 @@ use above are:
   {class}`~sqlalchemy.schema.Column` objects in terms of the parent {class}`~sqlalchemy.schema.Table`
   are typically accessed via an associative array located at {attr}`~sqlalchemy.schema.Table.c`:
 
-  ```
-  >>> user_table.c.name
-  Column('name', String(length=30), table=<user_account>)
+```{code-cell} ipython3
+user_table.c.name
+```
 
-  >>> user_table.c.keys()
-  ['id', 'name', 'fullname']
-  ```
+```{code-cell} ipython3
+user_table.c.keys()
+```
 
 - {class}`~sqlalchemy.types.Integer`, {class}`~sqlalchemy.types.String` - these classes represent
   SQL datatypes and can be passed to a {class}`~sqlalchemy.schema.Column` with or without
@@ -132,9 +143,8 @@ and is represented by the {class}`~sqlalchemy.schema.PrimaryKeyConstraint` const
 which we can see on the {attr}`~sqlalchemy.schema.Table.primary_key`
 attribute on the {class}`~sqlalchemy.schema.Table` object:
 
-```
->>> user_table.primary_key
-PrimaryKeyConstraint(Column('id', Integer(), table=<user_account>, primary_key=True, nullable=False))
+```{code-cell} ipython3
+user_table.primary_key
 ```
 
 The constraint that is most typically declared explicitly is the
@@ -150,15 +160,15 @@ via the {class}`~sqlalchemy.schema.ForeignKey` object.  Below we declare a secon
 `address` that will have a foreign key constraint referring to the `user`
 table:
 
-```
->>> from sqlalchemy import ForeignKey
->>> address_table = Table(
-...     "address",
-...     metadata,
-...     Column('id', Integer, primary_key=True),
-...     Column('user_id', ForeignKey('user_account.id'), nullable=False),
-...     Column('email_address', String, nullable=False)
-... )
+```{code-cell} ipython3
+from sqlalchemy import ForeignKey
+address_table = Table(
+    "address",
+    metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_id', ForeignKey('user_account.id'), nullable=False),
+    Column('email_address', String, nullable=False)
+)
 ```
 
 The table above also features a third kind of constraint, which in SQL is the
@@ -198,29 +208,11 @@ invoking the
 {meth}`~sqlalchemy.schema.MetaData.create_all` method on our {class}`~sqlalchemy.schema.MetaData`,
 sending it the {class}`~sqlalchemy.future.Engine` that refers to the target database:
 
-```python
->>> metadata.create_all(engine)
-{opensql}BEGIN (implicit)
-PRAGMA main.table_...info("user_account")
-...
-PRAGMA main.table_...info("address")
-...
-CREATE TABLE user_account (
-    id INTEGER NOT NULL,
-    name VARCHAR(30),
-    fullname VARCHAR,
-    PRIMARY KEY (id)
-)
-...
-CREATE TABLE address (
-    id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    email_address VARCHAR NOT NULL,
-    PRIMARY KEY (id),
-    FOREIGN KEY(user_id) REFERENCES user_account (id)
-)
-...
-COMMIT
+```{code-cell} ipython3
+from sqlalchemy import create_engine
+
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+metadata.create_all(engine)
 ```
 
 The DDL create process by default includes some SQLite-specific PRAGMA statements
@@ -277,18 +269,17 @@ however it itself is contained within an ORM-only object known as the
 {class}`~sqlalchemy.orm.registry`.   We create a {class}`~sqlalchemy.orm.registry` by constructing
 it:
 
-```
->>> from sqlalchemy.orm import registry
->>> mapper_registry = registry()
+```{code-cell} ipython3
+from sqlalchemy.orm import registry
+mapper_registry = registry()
 ```
 
 The above {class}`~sqlalchemy.orm.registry`, when constructed, automatically includes
 a {class}`~sqlalchemy.schema.MetaData` object that will store a collection of
 {class}`~sqlalchemy.schema.Table` objects:
 
-```
->>> mapper_registry.metadata
-MetaData()
+```{code-cell} ipython3
+mapper_registry.metadata
 ```
 
 Instead of declaring {class}`~sqlalchemy.schema.Table` objects directly, we will now
@@ -297,8 +288,8 @@ the most common approach, each mapped class descends from a common base class
 known as the **declarative base**.   We get a new declarative base from the
 {class}`~sqlalchemy.orm.registry` using the {meth}`~sqlalchemy.orm.registry.generate_base` method:
 
-```
->>> Base = mapper_registry.generate_base()
+```{code-cell} ipython3
+Base = mapper_registry.generate_base()
 ```
 
 :::{tip}
@@ -306,12 +297,11 @@ The steps of creating the {class}`~sqlalchemy.orm.registry` and "declarative bas
 classes can be combined into one step using the historically familiar
 {func}`~sqlalchemy.orm.declarative_base` function:
 
-```
+```python
 from sqlalchemy.orm import declarative_base
 Base = declarative_base()
 ```
 
-%
 :::
 
 (sqlatutorial:declaring-mapped-classes)=
@@ -323,31 +313,31 @@ for the ORM mapped classes we declare.  We can now define ORM mapped classes
 for the `user` and `address` table in terms of new classes `User` and
 `Address`:
 
-```
->>> from sqlalchemy.orm import relationship
->>> class User(Base):
-...     __tablename__ = 'user_account'
-...
-...     id = Column(Integer, primary_key=True)
-...     name = Column(String(30))
-...     fullname = Column(String)
-...
-...     addresses = relationship("Address", back_populates="user")
-...
-...     def __repr__(self):
-...        return f"User(id={self.id!r}, name={self.name!r}, fullname={self.fullname!r})"
+```{code-cell} ipython3
+from sqlalchemy.orm import relationship
+class User(Base):
+    __tablename__ = 'user_account'
 
->>> class Address(Base):
-...     __tablename__ = 'address'
-...
-...     id = Column(Integer, primary_key=True)
-...     email_address = Column(String, nullable=False)
-...     user_id = Column(Integer, ForeignKey('user_account.id'))
-...
-...     user = relationship("User", back_populates="addresses")
-...
-...     def __repr__(self):
-...         return f"Address(id={self.id!r}, email_address={self.email_address!r})"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(30))
+    fullname = Column(String)
+
+    addresses = relationship("Address", back_populates="user")
+
+    def __repr__(self):
+       return f"User(id={self.id!r}, name={self.name!r}, fullname={self.fullname!r})"
+
+class Address(Base):
+    __tablename__ = 'address'
+
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('user_account.id'))
+
+    user = relationship("User", back_populates="addresses")
+
+    def __repr__(self):
+        return f"Address(id={self.id!r}, email_address={self.email_address!r})"
 ```
 
 The above two classes are now our mapped classes, and are available for use in
@@ -358,12 +348,8 @@ directly in the previous Core section.   We can see these
 {class}`~sqlalchemy.schema.Table` objects from a declarative mapped class using the
 `.__table__` attribute:
 
-```
->>> User.__table__
-Table('user_account', MetaData(),
-    Column('id', Integer(), table=<user_account>, primary_key=True, nullable=False),
-    Column('name', String(length=30), table=<user_account>),
-    Column('fullname', String(), table=<user_account>), schema=None)
+```{code-cell} ipython3
+User.__table__
 ```
 
 This {class}`~sqlalchemy.schema.Table` object was generated from the declarative process
@@ -388,30 +374,23 @@ attributes:
   of the objects.  We are free to provide our own `__init__()` method as well.
   The `__init__()` allows us to create instances of `User` and `Address`
   passing attribute names, most of which above are linked directly to
-  {class}`~sqlalchemy.schema.Column` objects, as parameter names:
-
-  ```
-  >>> sandy = User(name="sandy", fullname="Sandy Cheeks")
-  ```
-
+  {class}`~sqlalchemy.schema.Column` objects, as parameter names.
   More detail on this method is at {ref}`mapped_class_default_constructor`.
 
-  %
+```{code-cell} ipython3
+sandy = User(name="sandy", fullname="Sandy Cheeks")
+```
 
 - **we provided a \_\_repr\_\_() method** - this is **fully optional**, and is
   strictly so that our custom classes have a descriptive string representation
-  and is not otherwise required:
-
-  ```
-  >>> sandy
-  User(id=None, name='sandy', fullname='Sandy Cheeks')
-  ```
-
-  %
-
-  An interesting thing to note above is that the `id` attribute automatically
+  and is not otherwise required.
+  An interesting thing to note, is that the `id` attribute automatically
   returns `None` when accessed, rather than raising `AttributeError` as
   would be the usual Python behavior for missing attributes.
+
+```{code-cell} ipython3
+sandy
+```
 
 - **we also included a bidirectional relationship** - this  is another **fully optional**
   construct, where we made use of an ORM construct called
@@ -437,13 +416,13 @@ make use of the {class}`~sqlalchemy.schema.MetaData` associated with our
 {class}`~sqlalchemy.orm.registry` and ORM declarative base class in order to do so,
 using {meth}`~sqlalchemy.schema.MetaData.create_all`:
 
-```
+```{code-cell} ipython3
 # emit CREATE statements given ORM registry
 mapper_registry.metadata.create_all(engine)
 
 # the identical MetaData object is also present on the
 # declarative base
-Base.metadata.create_all(engine)
+# Base.metadata.create_all(engine)
 ```
 
 ### Combining Core Table Declarations with ORM Declarative
@@ -459,22 +438,22 @@ This form is called  {ref}`hybrid table <orm_imperative_table_configuration>`,
 and it consists of assigning to the `.__table__` attribute directly, rather
 than having the declarative process generate it:
 
-```
+```python
 class User(Base):
     __table__ = user_table
 
-     addresses = relationship("Address", back_populates="user")
+    addresses = relationship("Address", back_populates="user")
 
-     def __repr__(self):
+    def __repr__(self):
         return f"User({self.name!r}, {self.fullname!r})"
 
 class Address(Base):
     __table__ = address_table
 
-     user = relationship("User", back_populates="addresses")
+    user = relationship("User", back_populates="addresses")
 
-     def __repr__(self):
-         return f"Address({self.email_address!r})"
+    def __repr__(self):
+        return f"Address({self.email_address!r})"
 ```
 
 The above two classes are equivalent to those which we declared in the
@@ -515,18 +494,8 @@ instead of indicating individual {class}`~sqlalchemy.schema.Column` and
 {class}`~sqlalchemy.schema.Constraint` objects, pass it the target {class}`~sqlalchemy.future.Engine`
 using the {paramref}`~sqlalchemy.schema.Table.autoload_with` parameter:
 
-```python
->>> some_table = Table("some_table", metadata, autoload_with=engine)
-{opensql}BEGIN (implicit)
-PRAGMA main.table_...info("some_table")
-[raw sql] ()
-SELECT sql FROM  (SELECT * FROM sqlite_master UNION ALL   SELECT * FROM sqlite_temp_master) WHERE name = ? AND type = 'table'
-[raw sql] ('some_table',)
-PRAGMA main.foreign_key_list("some_table")
-...
-PRAGMA main.index_list("some_table")
-...
-ROLLBACK{stop}
+```{code-cell} ipython3
+some_table = Table("user_account", metadata, autoload_with=engine)
 ```
 
 At the end of the process, the `some_table` object now contains the
@@ -534,12 +503,8 @@ information about the {class}`~sqlalchemy.schema.Column` objects present in the 
 the object is usable in exactly the same way as a {class}`~sqlalchemy.schema.Table` that
 we declared explicitly:
 
-```
->>> some_table
-Table('some_table', MetaData(),
-    Column('x', INTEGER(), table=<some_table>),
-    Column('y', INTEGER(), table=<some_table>),
-    schema=None)
+```{code-cell} ipython3
+some_table
 ```
 
 :::{seealso}

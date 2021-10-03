@@ -1,12 +1,21 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (sqlatutorial:selecting-data)=
 
 # Selecting Rows with Core or ORM
 
-For both Core and ORM, the {func}`~sqlalchemy.sql.expression.select` function generates a
-{class}`~sqlalchemy.sql.expression.Select` construct which is used for all SELECT queries.
+For both Core and ORM, the {func}`~sqlalchemy.sql.expression.select` function generates a {class}`~sqlalchemy.sql.expression.Select` construct which is used for all SELECT queries.
 Passed to methods like {meth}`~sqlalchemy.future.Connection.execute` in Core and
-{meth}`~sqlalchemy.orm.Session.execute` in ORM, a SELECT statement is emitted in the
-current transaction and the result rows available via the returned
+{meth}`~sqlalchemy.orm.Session.execute` in ORM, a SELECT statement is emitted in the current transaction and the result rows available via the returned
 {class}`~sqlalchemy.engine.Result` object.
 
 :::{div} orm-header
@@ -17,6 +26,63 @@ a lot more ORM-specific features available as well; these are documented
 at {ref}`queryguide_toplevel`.
 :::
 
+```{code-cell} ipython3
+:tags: [hide-output]
+
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, ForeignKey, insert
+from sqlalchemy.orm import declarative_base, Session
+
+Base = declarative_base()
+
+user_table = Table(
+    "user_account",
+    Base.metadata,
+    Column('id', Integer, primary_key=True),
+    Column('name', String(30)),
+    Column('fullname', String)
+)
+
+class User(Base):
+    __table__ = user_table
+    def __repr__(self):
+        return f"User({self.name!r}, {self.fullname!r})"
+
+address_table = Table(
+    "address",
+    Base.metadata,
+    Column('id', Integer, primary_key=True),
+    Column('user_id', ForeignKey('user_account.id'), nullable=False),
+    Column('email_address', String, nullable=False)
+)
+
+class Address(Base):
+    __table__ = address_table
+    def __repr__(self):
+        return f"Address({self.email_address!r})"
+
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+Base.metadata.create_all(engine)
+
+with engine.begin() as conn:
+    conn.execute(
+        insert(user_table),
+        [
+            {"id": 1, "name": "spongebob", "fullname": "Spongebob Squarepants"},
+            {"id": 2, "name": "sandy", "fullname": "Sandy Cheeks"},
+            {"id": 3, "name": "patrick", "fullname": "Patrick Star"}
+        ]
+    )
+with engine.begin() as conn:
+    conn.execute(
+        insert(address_table),
+        [
+            {"user_id": 1, "email_address": "spongebob@sqlalchemy.org"},
+            {"user_id": 2, "email_address": "sandy@sqlalchemy.org"},
+            {"user_id": 2, "email_address": "sandy@squirrelpower.org"},
+        ]
+    )
+```
+
 ## The select() SQL Expression Construct
 
 The {func}`~sqlalchemy.sql.expression.select` construct builds up a statement in the same way
@@ -24,13 +90,10 @@ as that of {func}`~sqlalchemy.sql.expression.insert`, using a {term}`generative`
 each method builds more state onto the object.  Like the other SQL constructs,
 it can be stringified in place:
 
-```
->>> from sqlalchemy import select
->>> stmt = select(user_table).where(user_table.c.name == 'spongebob')
->>> print(stmt)
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = :name_1
+```{code-cell} ipython3
+from sqlalchemy import select
+stmt = select(user_table).where(user_table.c.name == 'spongebob')
+print(stmt)
 ```
 
 Also in the same manner as all other statement-level SQL constructs, to
@@ -39,7 +102,7 @@ Since a SELECT statement returns
 rows we can always iterate the result object to get {class}`~sqlalchemy.engine.Row`
 objects back:
 
-```python
+```{code-cell} ipython3
 with engine.connect() as conn:
     for row in conn.execute(stmt):
         print(row)
@@ -53,7 +116,7 @@ result, however these rows are now capable of including
 complete entities, such as instances of the `User` class, as individual
 elements within each row:
 
-```python
+```{code-cell} ipython3
 stmt = select(User).where(User.name == 'spongebob')
 with Session(engine) as session:
     for row in session.execute(stmt):
@@ -81,10 +144,8 @@ expressions to be SELECTed from that will be returned as columns in the result
 set.  These elements also serve in simpler cases to create the FROM clause,
 which is inferred from the columns and table-like expressions passed:
 
-```
->>> print(select(user_table))
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
+```{code-cell} ipython3
+print(select(user_table))
 ```
 
 To SELECT from individual columns using a Core approach,
@@ -93,10 +154,8 @@ accessor and can be sent directly; the FROM clause will be inferred as the set
 of all {class}`~sqlalchemy.schema.Table` and other {class}`~sqlalchemy.sql.expression.FromClause` objects that
 are represented by those columns:
 
-```
->>> print(select(user_table.c.name, user_table.c.fullname))
-{opensql}SELECT user_account.name, user_account.fullname
-FROM user_account
+```{code-cell} ipython3
+print(select(user_table.c.name, user_table.c.fullname))
 ```
 
 (sqlatutorial:selecting-orm-entities)=
@@ -109,10 +168,8 @@ Language system representing tables and columns.    Below illustrates an
 example of SELECTing from the `User` entity, which ultimately renders
 in the same way as if we had used `user_table` directly:
 
-```
->>> print(select(User))
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
+```{code-cell} ipython3
+print(select(User))
 ```
 
 When executing a statement like the above using the ORM {meth}`~sqlalchemy.orm.Session.execute`
@@ -123,21 +180,15 @@ the above statement, as there is only the `User` entity in the list of
 things to fetch, we get back {class}`~sqlalchemy.engine.Row` objects that have only one element, which contain
 instances of the `User` class:
 
-```
->>> row = session.execute(select(User)).first()
-{opensql}BEGIN...
-SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-[...] (){stop}
->>> row
-(User(id=1, name='spongebob', fullname='Spongebob Squarepants'),)
+```{code-cell} ipython3
+row = session.execute(select(User)).first()
+row
 ```
 
 The above {class}`~sqlalchemy.engine.Row` has just one element, representing the `User` entity:
 
-```
->>> row[0]
-User(id=1, name='spongebob', fullname='Spongebob Squarepants')
+```{code-cell} ipython3
+row[0]
 ```
 
 Alternatively, we can select individual columns of an ORM entity as distinct
@@ -146,42 +197,29 @@ are passed to a construct such as {func}`~sqlalchemy.sql.expression.select`, the
 the {class}`~sqlalchemy.schema.Column` or other SQL expression represented by each
 attribute:
 
-```
->>> print(select(User.name, User.fullname))
-{opensql}SELECT user_account.name, user_account.fullname
-FROM user_account
+```{code-cell} ipython3
+print(select(User.name, User.fullname))
 ```
 
 When we invoke *this* statement using {meth}`~sqlalchemy.orm.Session.execute`, we now
 receive rows that have individual elements per value, each corresponding
 to a separate column or other SQL expression:
 
-```
->>> row = session.execute(select(User.name, User.fullname)).first()
-{opensql}SELECT user_account.name, user_account.fullname
-FROM user_account
-[...] (){stop}
->>> row
-('spongebob', 'Spongebob Squarepants')
+```{code-cell} ipython3
+row = session.execute(select(User.name, User.fullname)).first()
+row
 ```
 
 The approaches can also be mixed, as below where we SELECT the `name`
 attribute of the `User` entity as the first element of the row, and combine
 it with full `Address` entities in the second element:
 
-```
->>> session.execute(
-...     select(User.name, Address).
-...     where(User.id==Address.user_id).
-...     order_by(Address.id)
-... ).all()
-{opensql}SELECT user_account.name, address.id, address.email_address, address.user_id
-FROM user_account, address
-WHERE user_account.id = address.user_id ORDER BY address.id
-[...] (){stop}
-[('spongebob', Address(id=1, email_address='spongebob@sqlalchemy.org')),
-('sandy', Address(id=2, email_address='sandy@sqlalchemy.org')),
-('sandy', Address(id=3, email_address='sandy@squirrelpower.org'))]
+```{code-cell} ipython3
+session.execute(
+    select(User.name, Address).
+    where(User.id==Address.user_id).
+    order_by(Address.id)
+).all()
 ```
 
 Approaches towards selecting ORM entities and columns as well as common methods
@@ -198,24 +236,16 @@ available on ORM attributes provides a SQL label of a column or expression,
 allowing it to have a specific name in a result set.  This can be helpful
 when referring to arbitrary SQL expressions in a result row by name:
 
-```python
->>> from sqlalchemy import func, cast
->>> stmt = (
-...     select(
-...         ("Username: " + user_table.c.name).label("username"),
-...     ).order_by(user_table.c.name)
-... )
->>> with engine.connect() as conn:
-...     for row in conn.execute(stmt):
-...         print(f"{row.username}")
-{opensql}BEGIN (implicit)
-SELECT ? || user_account.name AS username
-FROM user_account ORDER BY user_account.name
-[...] ('Username: ',){stop}
-Username: patrick
-Username: sandy
-Username: spongebob
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+from sqlalchemy import func, cast
+stmt = (
+    select(
+        ("Username: " + user_table.c.name).label("username"),
+    ).order_by(user_table.c.name)
+)
+with engine.connect() as conn:
+    for row in conn.execute(stmt):
+        print(f"{row.username}")
 ```
 
 :::{seealso}
@@ -242,21 +272,15 @@ The {func}`~sqlalchemy.sql.expression.text` construct introduced at
 a hardcoded string literal `'some label'` and embed it within the
 SELECT statement:
 
-```
->>> from sqlalchemy import text
->>> stmt = (
-...     select(
-...         text("'some phrase'"), user_table.c.name
-...     ).order_by(user_table.c.name)
-... )
->>> with engine.connect() as conn:
-...     print(conn.execute(stmt).all())
-{opensql}BEGIN (implicit)
-SELECT 'some phrase', user_account.name
-FROM user_account ORDER BY user_account.name
-[generated in ...] ()
-{stop}[('some phrase', 'patrick'), ('some phrase', 'sandy'), ('some phrase', 'spongebob')]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+from sqlalchemy import text
+stmt = (
+    select(
+        text("'some phrase'"), user_table.c.name
+    ).order_by(user_table.c.name)
+)
+with engine.connect() as conn:
+    print(conn.execute(stmt).all())
 ```
 
 While the {func}`~sqlalchemy.sql.expression.text` construct can be used in most places to inject
@@ -269,24 +293,16 @@ instead of representing arbitrary SQL of any form,
 it explicitly represents a single "column" and can then be labeled and referred
 towards in subqueries and other expressions:
 
-```
->>> from sqlalchemy import literal_column
->>> stmt = (
-...     select(
-...         literal_column("'some phrase'").label("p"), user_table.c.name
-...     ).order_by(user_table.c.name)
-... )
->>> with engine.connect() as conn:
-...     for row in conn.execute(stmt):
-...         print(f"{row.p}, {row.name}")
-{opensql}BEGIN (implicit)
-SELECT 'some phrase' AS p, user_account.name
-FROM user_account ORDER BY user_account.name
-[generated in ...] ()
-{stop}some phrase, patrick
-some phrase, sandy
-some phrase, spongebob
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+from sqlalchemy import literal_column
+stmt = (
+    select(
+        literal_column("'some phrase'").label("p"), user_table.c.name
+    ).order_by(user_table.c.name)
+)
+with engine.connect() as conn:
+    for row in conn.execute(stmt):
+        print(f"{row.p}, {row.name}")
 ```
 
 Note that in both cases, when using {func}`~sqlalchemy.sql.expression.text` or
@@ -305,73 +321,57 @@ conjunction with
 Python operators such as `==`, `!=`, `<`, `>=` etc. generate new
 SQL Expression objects, rather than plain boolean `True`/`False` values:
 
-```
->>> print(user_table.c.name == 'squidward')
-user_account.name = :name_1
-
->>> print(address_table.c.user_id > 10)
-address.user_id > :user_id_1
+```{code-cell} ipython3
+print(user_table.c.name == 'squidward')
+print(address_table.c.user_id > 10)
 ```
 
 We can use expressions like these to generate the WHERE clause by passing
 the resulting objects to the {meth}`~sqlalchemy.sql.expression.Select.where` method:
 
-```
->>> print(select(user_table).where(user_table.c.name == 'squidward'))
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = :name_1
+```{code-cell} ipython3
+print(select(user_table).where(user_table.c.name == 'squidward'))
 ```
 
 To produce multiple expressions joined by AND, the {meth}`~sqlalchemy.sql.expression.Select.where`
 method may be invoked any number of times:
 
-```
->>> print(
-...     select(address_table.c.email_address).
-...     where(user_table.c.name == 'squidward').
-...     where(address_table.c.user_id == user_table.c.id)
-... )
-{opensql}SELECT address.email_address
-FROM address, user_account
-WHERE user_account.name = :name_1 AND address.user_id = user_account.id
+```{code-cell} ipython3
+print(
+    select(address_table.c.email_address).
+    where(user_table.c.name == 'squidward').
+    where(address_table.c.user_id == user_table.c.id)
+)
 ```
 
 A single call to {meth}`~sqlalchemy.sql.expression.Select.where` also accepts multiple expressions
 with the same effect:
 
-```
->>> print(
-...     select(address_table.c.email_address).
-...     where(
-...          user_table.c.name == 'squidward',
-...          address_table.c.user_id == user_table.c.id
-...     )
-... )
-{opensql}SELECT address.email_address
-FROM address, user_account
-WHERE user_account.name = :name_1 AND address.user_id = user_account.id
+```{code-cell} ipython3
+print(
+    select(address_table.c.email_address).
+    where(
+         user_table.c.name == 'squidward',
+         address_table.c.user_id == user_table.c.id
+    )
+)
 ```
 
 "AND" and "OR" conjunctions are both available directly using the
 {func}`~sqlalchemy.sql.expression.and_` and {func}`~sqlalchemy.sql.expression.or_` functions, illustrated below in terms
 of ORM entities:
 
-```
->>> from sqlalchemy import and_, or_
->>> print(
-...     select(Address.email_address).
-...     where(
-...         and_(
-...             or_(User.name == 'squidward', User.name == 'sandy'),
-...             Address.user_id == User.id
-...         )
-...     )
-... )
-{opensql}SELECT address.email_address
-FROM address, user_account
-WHERE (user_account.name = :name_1 OR user_account.name = :name_2)
-AND address.user_id = user_account.id
+```{code-cell} ipython3
+from sqlalchemy import and_, or_
+print(
+    select(Address.email_address).
+    where(
+        and_(
+            or_(User.name == 'squidward', User.name == 'sandy'),
+            Address.user_id == User.id
+        )
+    )
+)
 ```
 
 For simple "equality" comparisons against a single entity, there's also a
@@ -379,13 +379,10 @@ popular method known as {meth}`~sqlalchemy.sql.expression.Select.filter_by` whic
 arguments that match to column keys or ORM attribute names.  It will filter
 against the leftmost FROM clause or the last entity joined:
 
-```
->>> print(
-...     select(User).filter_by(name='spongebob', fullname='Spongebob Squarepants')
-... )
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = :name_1 AND user_account.fullname = :fullname_1
+```{code-cell} ipython3
+print(
+    select(User).filter_by(name='spongebob', fullname='Spongebob Squarepants')
+)
 ```
 
 :::{seealso}
@@ -404,19 +401,15 @@ If we set a single column from a particular {class}`~sqlalchemy.schema.Table`
 in the COLUMNS clause, it puts that {class}`~sqlalchemy.schema.Table` in the FROM
 clause as well:
 
-```
->>> print(select(user_table.c.name))
-{opensql}SELECT user_account.name
-FROM user_account
+```{code-cell} ipython3
+print(select(user_table.c.name))
 ```
 
 If we were to put columns from two tables, then we get a comma-separated FROM
 clause:
 
-```
->>> print(select(user_table.c.name, address_table.c.email_address))
-{opensql}SELECT user_account.name, address.email_address
-FROM user_account, address
+```{code-cell} ipython3
+print(select(user_table.c.name, address_table.c.email_address))
 ```
 
 In order to JOIN these two tables together, we typically use one of two methods
@@ -424,28 +417,24 @@ on {class}`~sqlalchemy.sql.expression.Select`.  The first is the {meth}`~sqlalch
 method, which allows us to indicate the left and right side of the JOIN
 explicitly:
 
-```
->>> print(
-...     select(user_table.c.name, address_table.c.email_address).
-...     join_from(user_table, address_table)
-... )
-{opensql}SELECT user_account.name, address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
+```{code-cell} ipython3
+print(
+    select(user_table.c.name, address_table.c.email_address).
+    join_from(user_table, address_table)
+)
 ```
 
 The other is the the {meth}`~sqlalchemy.sql.expression.Select.join` method, which indicates only the
 right side of the JOIN, the left hand-side is inferred:
 
-```
->>> print(
-...     select(user_table.c.name, address_table.c.email_address).
-...     join(address_table)
-... )
-{opensql}SELECT user_account.name, address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
+```{code-cell} ipython3
+print(
+    select(user_table.c.name, address_table.c.email_address).
+    join(address_table)
+)
 ```
 
-:::{sidebar} The ON Clause is inferred
+:::{admonition} The ON Clause is inferred
 When using {meth}`~sqlalchemy.sql.expression.Select.join_from` or {meth}`~sqlalchemy.sql.expression.Select.join`, we may
 observe that the ON clause of the join is also inferred for us in simple
 foreign key cases. More on that in the next section.
@@ -458,13 +447,11 @@ where we establish `user_table` as the first element in the FROM
 clause and {meth}`~sqlalchemy.sql.expression.Select.join` to establish `address_table` as
 the second:
 
-```
->>> print(
-...     select(address_table.c.email_address).
-...     select_from(user_table).join(address_table)
-... )
-{opensql}SELECT address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
+```{code-cell} ipython3
+print(
+    select(address_table.c.email_address).
+    select_from(user_table).join(address_table)
+)
 ```
 
 Another example where we might want to use {meth}`~sqlalchemy.sql.expression.Select.select_from`
@@ -473,13 +460,11 @@ FROM clause.  For example, to SELECT from the common SQL expression
 `count(*)`, we use a SQLAlchemy element known as {data}`~sqlalchemy.sql.expression.func` to
 produce the SQL `count()` function:
 
-```
->>> from sqlalchemy import func
->>> print (
-...     select(func.count('*')).select_from(user_table)
-... )
-{opensql}SELECT count(:count_2) AS count_1
-FROM user_account
+```{code-cell} ipython3
+from sqlalchemy import func
+print (
+    select(func.count('*')).select_from(user_table)
+)
 ```
 
 :::{seealso}
@@ -505,14 +490,12 @@ directly.   Both {meth}`~sqlalchemy.sql.expression.Select.join` and {meth}`~sqla
 accept an additional argument for the ON clause, which is stated using the
 same SQL Expression mechanics as we saw about in {ref}`sqlatutorial:select-where-clause`:
 
-```
->>> print(
-...     select(address_table.c.email_address).
-...     select_from(user_table).
-...     join(address_table, user_table.c.id == address_table.c.user_id)
-... )
-{opensql}SELECT address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
+```{code-cell} ipython3
+print(
+    select(address_table.c.email_address).
+    select_from(user_table).
+    join(address_table, user_table.c.id == address_table.c.user_id)
+)
 ```
 
 :::{div} orm-header
@@ -532,18 +515,13 @@ accept keyword arguments {paramref}`~sqlalchemy.sql.expression.Select.join.isout
 {paramref}`~sqlalchemy.sql.expression.Select.join.full` which will render LEFT OUTER JOIN
 and FULL OUTER JOIN, respectively:
 
-```
->>> print(
-...     select(user_table).join(address_table, isouter=True)
-... )
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account LEFT OUTER JOIN address ON user_account.id = address.user_id{stop}
-
->>> print(
-...     select(user_table).join(address_table, full=True)
-... )
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account FULL OUTER JOIN address ON user_account.id = address.user_id{stop}
+```{code-cell} ipython3
+print(
+    select(user_table).join(address_table, isouter=True)
+)
+print(
+    select(user_table).join(address_table, full=True)
+)
 ```
 
 There is also a method {meth}`~sqlalchemy.sql.expression.Select.outerjoin` that is equivalent to
@@ -576,20 +554,16 @@ of SQL Expression constructs typically based on {class}`~sqlalchemy.schema.Colum
 similar objects.  The {meth}`~sqlalchemy.sql.expression.Select.order_by` method accepts one or
 more of these expressions positionally:
 
-```
->>> print(select(user_table).order_by(user_table.c.name))
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account ORDER BY user_account.name
+```{code-cell} ipython3
+print(select(user_table).order_by(user_table.c.name))
 ```
 
 Ascending / descending is available from the {meth}`~sqlalchemy.sql.expression.ColumnElement.asc`
 and {meth}`~sqlalchemy.sql.expression.ColumnElement.desc` modifiers, which are present
 from ORM-bound attributes as well:
 
-```
->>> print(select(User).order_by(User.fullname.desc()))
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account ORDER BY user_account.fullname DESC
+```{code-cell} ipython3
+print(select(User).order_by(User.fullname.desc()))
 ```
 
 The above statement will yield rows that are sorted by the
@@ -613,11 +587,10 @@ SQL Expression constructs.   For example, to
 render the SQL COUNT() function against the `user_account.id` column,
 we call upon the `count()` name:
 
-```
->>> from sqlalchemy import func
->>> count_fn = func.count(user_table.c.id)
->>> print(count_fn)
-{opensql}count(user_account.id)
+```{code-cell} ipython3
+from sqlalchemy import func
+count_fn = func.count(user_table.c.id)
+print(count_fn)
 ```
 
 SQL functions are described in more detail later in this tutorial at
@@ -637,22 +610,15 @@ and {meth}`~sqlalchemy.sql.expression.Select.having` methods.   Below we illustr
 user name fields as well as count of addresses, for those users that have more
 than one address:
 
-```python
->>> with engine.connect() as conn:
-...     result = conn.execute(
-...         select(User.name, func.count(Address.id).label("count")).
-...         join(Address).
-...         group_by(User.name).
-...         having(func.count(Address.id) > 1)
-...     )
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT user_account.name, count(address.id) AS count
-FROM user_account JOIN address ON user_account.id = address.user_id GROUP BY user_account.name
-HAVING count(address.id) > ?
-[...] (1,){stop}
-[('sandy', 2)]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+with engine.connect() as conn:
+    result = conn.execute(
+        select(User.name, func.count(Address.id).label("count")).
+        join(Address).
+        group_by(User.name).
+        having(func.count(Address.id) > 1)
+    )
+    print(result.all())
 ```
 
 (sqlatutorial:order-by-label)=
@@ -670,15 +636,13 @@ in the columns clause and rendered as that expression name in context, raising a
 error if no match is found.
 The unary modifiers {func}`~sqlalchemy.sql.expression.asc` and {func}`~sqlalchemy.sql.expression.desc` may also be used in this form:
 
-```python
->>> from sqlalchemy import func, desc
->>> stmt = select(
-...         Address.user_id,
-...         func.count(Address.id).label('num_addresses')).\
-...         group_by("user_id").order_by("user_id", desc("num_addresses"))
->>> print(stmt)
-{opensql}SELECT address.user_id, count(address.id) AS num_addresses
-FROM address GROUP BY address.user_id ORDER BY address.user_id, num_addresses DESC
+```{code-cell} ipython3
+from sqlalchemy import func, desc
+stmt = select(
+        Address.user_id,
+        func.count(Address.id).label('num_addresses')).\
+        group_by("user_id").order_by("user_id", desc("num_addresses"))
+print(stmt)
 ```
 
 (sqlatutorial:using-aliases)=
@@ -696,19 +660,16 @@ In the SQLAlchemy Expression Language, these "names" are instead represented by
 which is constructed in Core using the {meth}`~sqlalchemy.sql.expression.FromClause.alias`
 method. An {class}`~sqlalchemy.sql.expression.Alias` construct is just like a {class}`~sqlalchemy.schema.Table`
 construct in that it also has a namespace of {class}`~sqlalchemy.schema.Column`
-objects within the {attr}`~sqlalchemy.sql.expression.Alias.c` collection.  The SELECT statement
+objects within the `Alias.c` collection.  The SELECT statement
 below for example returns all unique pairs of user names:
 
-```
->>> user_alias_1 = user_table.alias()
->>> user_alias_2 = user_table.alias()
->>> print(
-...     select(user_alias_1.c.name, user_alias_2.c.name).
-...     join_from(user_alias_1, user_alias_2, user_alias_1.c.id > user_alias_2.c.id)
-... )
-{opensql}SELECT user_account_1.name, user_account_2.name AS name_1
-FROM user_account AS user_account_1
-JOIN user_account AS user_account_2 ON user_account_1.id > user_account_2.id
+```{code-cell} ipython3
+user_alias_1 = user_table.alias()
+user_alias_2 = user_table.alias()
+print(
+    select(user_alias_1.c.name, user_alias_2.c.name).
+    join_from(user_alias_1, user_alias_2, user_alias_1.c.id > user_alias_2.c.id)
+)
 ```
 
 (sqlatutorial:orm-entity-aliases)=
@@ -722,23 +683,17 @@ internally that's against the original mapped {class}`~sqlalchemy.schema.Table` 
 while maintaining ORM functionality.  The SELECT below selects from the
 `User` entity all objects that include two particular email addresses:
 
-```
->>> from sqlalchemy.orm import aliased
->>> address_alias_1 = aliased(Address)
->>> address_alias_2 = aliased(Address)
->>> print(
-...     select(User).
-...     join_from(User, address_alias_1).
-...     where(address_alias_1.email_address == 'patrick@aol.com').
-...     join_from(User, address_alias_2).
-...     where(address_alias_2.email_address == 'patrick@gmail.com')
-... )
-{opensql}SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-JOIN address AS address_1 ON user_account.id = address_1.user_id
-JOIN address AS address_2 ON user_account.id = address_2.user_id
-WHERE address_1.email_address = :email_address_1
-AND address_2.email_address = :email_address_2
+```{code-cell} ipython3
+from sqlalchemy.orm import aliased
+address_alias_1 = aliased(Address)
+address_alias_2 = aliased(Address)
+print(
+    select(User).
+    join_from(User, address_alias_1).
+    where(address_alias_1.email_address == 'patrick@aol.com').
+    join_from(User, address_alias_2).
+    where(address_alias_2.email_address == 'patrick@gmail.com')
+)
 ```
 
 :::{tip}
@@ -771,49 +726,41 @@ We can construct a {class}`~sqlalchemy.sql.expression.Subquery` that will select
 of rows from the `address` table (aggregate functions and GROUP BY were
 introduced previously at {ref}`sqlatutorial:group-by-w-aggregates`):
 
-> >>> subq = select(
-> ...     func.count(address_table.c.id).label("count"),
-> ...     address_table.c.user_id
-> ... ).group_by(address_table.c.user_id).subquery()
+```{code-cell} ipython3
+subq = select(
+    func.count(address_table.c.id).label("count"),
+    address_table.c.user_id
+).group_by(address_table.c.user_id).subquery()
+```
 
 Stringifying the subquery by itself without it being embedded inside of another
 {class}`~sqlalchemy.sql.expression.Select` or other statement produces the plain SELECT statement
 without any enclosing parenthesis:
 
-```
->>> print(subq)
-{opensql}SELECT count(address.id) AS count, address.user_id
-FROM address GROUP BY address.user_id
+```{code-cell} ipython3
+print(subq)
 ```
 
-The {class}`~sqlalchemy.sql.expression.Subquery` object behaves like any other FROM object such
-as a {class}`~sqlalchemy.schema.Table`, notably that it includes a {attr}`~sqlalchemy.sql.expression.Subquery.c`
-namespace of the columns which it selects.  We can use this namespace to
-refer to both the `user_id` column as well as our custom labeled
-`count` expression:
+The {class}`~sqlalchemy.sql.expression.Subquery` object behaves like any other FROM object such as a {class}`~sqlalchemy.schema.Table`,
+notably that it includes a `Subquery.c` namespace of the columns which it selects.
+We can use this namespace to refer to both the `user_id` column as well as our custom labeled `count` expression:
 
-```
->>> print(select(subq.c.user_id, subq.c.count))
-{opensql}SELECT anon_1.user_id, anon_1.count
-FROM (SELECT count(address.id) AS count, address.user_id AS user_id
-FROM address GROUP BY address.user_id) AS anon_1
+```{code-cell} ipython3
+print(select(subq.c.user_id, subq.c.count))
 ```
 
 With a selection of rows contained within the `subq` object, we can apply
 the object to a larger {class}`~sqlalchemy.sql.expression.Select` that will join the data to
 the `user_account` table:
 
-```
->>> stmt = select(
-...    user_table.c.name,
-...    user_table.c.fullname,
-...    subq.c.count
-... ).join_from(user_table, subq)
+```{code-cell} ipython3
+stmt = select(
+   user_table.c.name,
+   user_table.c.fullname,
+   subq.c.count
+).join_from(user_table, subq)
 
->>> print(stmt)
-{opensql}SELECT user_account.name, user_account.fullname, anon_1.count
-FROM user_account JOIN (SELECT count(address.id) AS count, address.user_id AS user_id
-FROM address GROUP BY address.user_id) AS anon_1 ON user_account.id = anon_1.user_id
+print(stmt)
 ```
 
 In order to join from `user_account` to `address`, we made use of the
@@ -834,24 +781,19 @@ the invocation of the {meth}`~sqlalchemy.sql.expression.Select.subquery` method 
 element in the same way, but the SQL rendered is the very different common
 table expression syntax:
 
-```
->>> subq = select(
-...     func.count(address_table.c.id).label("count"),
-...     address_table.c.user_id
-... ).group_by(address_table.c.user_id).cte()
+```{code-cell} ipython3
+subq = select(
+    func.count(address_table.c.id).label("count"),
+    address_table.c.user_id
+).group_by(address_table.c.user_id).cte()
 
->>> stmt = select(
-...    user_table.c.name,
-...    user_table.c.fullname,
-...    subq.c.count
-... ).join_from(user_table, subq)
+stmt = select(
+   user_table.c.name,
+   user_table.c.fullname,
+   subq.c.count
+).join_from(user_table, subq)
 
->>> print(stmt)
-{opensql}WITH anon_1 AS
-(SELECT count(address.id) AS count, address.user_id AS user_id
-FROM address GROUP BY address.user_id)
- SELECT user_account.name, user_account.fullname, anon_1.count
-FROM user_account JOIN anon_1 ON user_account.id = anon_1.user_id
+print(stmt)
 ```
 
 The {class}`~sqlalchemy.sql.expression.CTE` construct also features the ability to be used
@@ -891,53 +833,25 @@ shows a series of `User` and `Address` objects, where the data for
 each `Address` object ultimately came from a subquery against the
 `address` table rather than that table directly:
 
-```python
->>> subq = select(Address).where(~Address.email_address.like('%@aol.com')).subquery()
->>> address_subq = aliased(Address, subq)
->>> stmt = select(User, address_subq).join_from(User, address_subq).order_by(User.id, address_subq.id)
->>> with Session(engine) as session:
-...     for user, address in session.execute(stmt):
-...         print(f"{user} {address}")
-{opensql}BEGIN (implicit)
-SELECT user_account.id, user_account.name, user_account.fullname,
-anon_1.id AS id_1, anon_1.email_address, anon_1.user_id
-FROM user_account JOIN
-(SELECT address.id AS id, address.email_address AS email_address, address.user_id AS user_id
-FROM address
-WHERE address.email_address NOT LIKE ?) AS anon_1 ON user_account.id = anon_1.user_id
-ORDER BY user_account.id, anon_1.id
-[...] ('%@aol.com',){stop}
-User(id=1, name='spongebob', fullname='Spongebob Squarepants') Address(id=1, email_address='spongebob@sqlalchemy.org')
-User(id=2, name='sandy', fullname='Sandy Cheeks') Address(id=2, email_address='sandy@sqlalchemy.org')
-User(id=2, name='sandy', fullname='Sandy Cheeks') Address(id=3, email_address='sandy@squirrelpower.org')
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+subq = select(Address).where(~Address.email_address.like('%@aol.com')).subquery()
+address_subq = aliased(Address, subq)
+stmt = select(User, address_subq).join_from(User, address_subq).order_by(User.id, address_subq.id)
+with Session(engine) as session:
+    for user, address in session.execute(stmt):
+        print(f"{user} {address}")
 ```
 
 Another example follows, which is exactly the same except it makes use of the
 {class}`~sqlalchemy.sql.expression.CTE` construct instead:
 
-```python
->>> cte = select(Address).where(~Address.email_address.like('%@aol.com')).cte()
->>> address_cte = aliased(Address, cte)
->>> stmt = select(User, address_cte).join_from(User, address_cte).order_by(User.id, address_cte.id)
->>> with Session(engine) as session:
-...     for user, address in session.execute(stmt):
-...         print(f"{user} {address}")
-{opensql}BEGIN (implicit)
-WITH anon_1 AS
-(SELECT address.id AS id, address.email_address AS email_address, address.user_id AS user_id
-FROM address
-WHERE address.email_address NOT LIKE ?)
-SELECT user_account.id, user_account.name, user_account.fullname,
-anon_1.id AS id_1, anon_1.email_address, anon_1.user_id
-FROM user_account
-JOIN anon_1 ON user_account.id = anon_1.user_id
-ORDER BY user_account.id, anon_1.id
-[...] ('%@aol.com',){stop}
-User(id=1, name='spongebob', fullname='Spongebob Squarepants') Address(id=1, email_address='spongebob@sqlalchemy.org')
-User(id=2, name='sandy', fullname='Sandy Cheeks') Address(id=2, email_address='sandy@sqlalchemy.org')
-User(id=2, name='sandy', fullname='Sandy Cheeks') Address(id=3, email_address='sandy@squirrelpower.org')
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+cte = select(Address).where(~Address.email_address.like('%@aol.com')).cte()
+address_cte = aliased(Address, cte)
+stmt = select(User, address_cte).join_from(User, address_cte).order_by(User.id, address_cte.id)
+with Session(engine) as session:
+    for user, address in session.execute(stmt):
+        print(f"{user} {address}")
 ```
 
 (sqlatutorial:scalar-subquery)=
@@ -962,25 +876,19 @@ subquery is indicated explicitly by making use of the {meth}`~sqlalchemy.sql.exp
 method as below.  It's default string form when stringified by itself
 renders as an ordinary SELECT statement that is selecting from two tables:
 
-```
->>> subq = select(func.count(address_table.c.id)).\
-...             where(user_table.c.id == address_table.c.user_id).\
-...             scalar_subquery()
->>> print(subq)
-{opensql}(SELECT count(address.id) AS count_1
-FROM address, user_account
-WHERE user_account.id = address.user_id)
+```{code-cell} ipython3
+subq = select(func.count(address_table.c.id)).\
+            where(user_table.c.id == address_table.c.user_id).\
+            scalar_subquery()
+print(subq)
 ```
 
 The above `subq` object now falls within the {class}`~sqlalchemy.sql.expression.ColumnElement`
 SQL expression hierarchy, in that it may be used like any other column
 expression:
 
-```
->>> print(subq == 5)
-{opensql}(SELECT count(address.id) AS count_1
-FROM address, user_account
-WHERE user_account.id = address.user_id) = :param_1
+```{code-cell} ipython3
+print(subq == 5)
 ```
 
 Although the scalar subquery by itself renders both `user_account` and
@@ -989,68 +897,52 @@ into an enclosing {func}`~sqlalchemy.sql.expression.select` construct that deals
 `user_account` table, the `user_account` table is automatically
 **correlated**, meaning it does not render in the FROM clause of the subquery:
 
-```
->>> stmt = select(user_table.c.name, subq.label("address_count"))
->>> print(stmt)
-{opensql}SELECT user_account.name, (SELECT count(address.id) AS count_1
-FROM address
-WHERE user_account.id = address.user_id) AS address_count
-FROM user_account
+```{code-cell} ipython3
+stmt = select(user_table.c.name, subq.label("address_count"))
+print(stmt)
 ```
 
 Simple correlated subqueries will usually do the right thing that's desired.
 However, in the case where the correlation is ambiguous, SQLAlchemy will let
 us know that more clarity is needed:
 
-```
->>> stmt = select(
-...     user_table.c.name,
-...     address_table.c.email_address,
-...     subq.label("address_count")
-... ).\
-... join_from(user_table, address_table).\
-... order_by(user_table.c.id, address_table.c.id)
->>> print(stmt)
-Traceback (most recent call last):
-...
-InvalidRequestError: Select statement '<... Select object at ...>' returned
-no FROM clauses due to auto-correlation; specify correlate(<tables>) to
-control correlation manually.
+```{code-cell} ipython3
+:tags: [raises-exception]
+
+stmt = select(
+    user_table.c.name,
+    address_table.c.email_address,
+    subq.label("address_count")
+).\
+join_from(user_table, address_table).\
+order_by(user_table.c.id, address_table.c.id)
+print(stmt)
 ```
 
 To specify that the `user_table` is the one we seek to correlate we specify
 this using the {meth}`~sqlalchemy.sql.expression.ScalarSelect.correlate` or
 {meth}`~sqlalchemy.sql.expression.ScalarSelect.correlate_except` methods:
 
-```
->>> subq = select(func.count(address_table.c.id)).\
-...             where(user_table.c.id == address_table.c.user_id).\
-...             scalar_subquery().correlate(user_table)
+```{code-cell} ipython3
+subq = select(func.count(address_table.c.id)).\
+            where(user_table.c.id == address_table.c.user_id).\
+            scalar_subquery().correlate(user_table)
 ```
 
 The statement then can return the data for this column like any other:
 
-```python
->>> with engine.connect() as conn:
-...     result = conn.execute(
-...         select(
-...             user_table.c.name,
-...             address_table.c.email_address,
-...             subq.label("address_count")
-...         ).
-...         join_from(user_table, address_table).
-...         order_by(user_table.c.id, address_table.c.id)
-...     )
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT user_account.name, address.email_address, (SELECT count(address.id) AS count_1
-FROM address
-WHERE user_account.id = address.user_id) AS address_count
-FROM user_account JOIN address ON user_account.id = address.user_id ORDER BY user_account.id, address.id
-[...] (){stop}
-[('spongebob', 'spongebob@sqlalchemy.org', 1), ('sandy', 'sandy@sqlalchemy.org', 2),
- ('sandy', 'sandy@squirrelpower.org', 2)]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+with engine.connect() as conn:
+    result = conn.execute(
+        select(
+            user_table.c.name,
+            address_table.c.email_address,
+            subq.label("address_count")
+        ).
+        join_from(user_table, address_table).
+        order_by(user_table.c.id, address_table.c.id)
+    )
+    print(result.all())
 ```
 
 (sqlatutorial:union)=
@@ -1075,24 +967,14 @@ that it has fewer methods.   The {class}`~sqlalchemy.sql.expression.CompoundSele
 {func}`~sqlalchemy.sql.expression.union_all` for example may be invoked directly using
 {meth}`~sqlalchemy.engine.Connection.execute`:
 
-```
->>> from sqlalchemy import union_all
->>> stmt1 = select(user_table).where(user_table.c.name == 'sandy')
->>> stmt2 = select(user_table).where(user_table.c.name == 'spongebob')
->>> u = union_all(stmt1, stmt2)
->>> with engine.connect() as conn:
-...     result = conn.execute(u)
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = ?
-UNION ALL SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = ?
-[generated in ...] ('sandy', 'spongebob')
-{stop}[(2, 'sandy', 'Sandy Cheeks'), (1, 'spongebob', 'Spongebob Squarepants')]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+from sqlalchemy import union_all
+stmt1 = select(user_table).where(user_table.c.name == 'sandy')
+stmt2 = select(user_table).where(user_table.c.name == 'spongebob')
+u = union_all(stmt1, stmt2)
+with engine.connect() as conn:
+    result = conn.execute(u)
+    print(result.all())
 ```
 
 To use a {class}`~sqlalchemy.sql.expression.CompoundSelect` as a subquery, just like {class}`~sqlalchemy.sql.expression.Select`
@@ -1100,31 +982,16 @@ it provides a {meth}`~sqlalchemy.sql.expression.SelectBase.subquery` method whic
 {class}`~sqlalchemy.sql.expression.Subquery` object with a {attr}`~sqlalchemy.sql.expression.FromClause.c`
 collection that may be referred towards in an enclosing {func}`~sqlalchemy.sql.expression.select`:
 
-```
->>> u_subq = u.subquery()
->>> stmt = (
-...     select(u_subq.c.name, address_table.c.email_address).
-...     join_from(address_table, u_subq).
-...     order_by(u_subq.c.name, address_table.c.email_address)
-... )
->>> with engine.connect() as conn:
-...     result = conn.execute(stmt)
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT anon_1.name, address.email_address
-FROM address JOIN
-  (SELECT user_account.id AS id, user_account.name AS name, user_account.fullname AS fullname
-  FROM user_account
-  WHERE user_account.name = ?
-UNION ALL
-  SELECT user_account.id AS id, user_account.name AS name, user_account.fullname AS fullname
-  FROM user_account
-  WHERE user_account.name = ?)
-AS anon_1 ON anon_1.id = address.user_id
-ORDER BY anon_1.name, address.email_address
-[generated in ...] ('sandy', 'spongebob')
-{stop}[('sandy', 'sandy@sqlalchemy.org'), ('sandy', 'sandy@squirrelpower.org'), ('spongebob', 'spongebob@sqlalchemy.org')]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+u_subq = u.subquery()
+stmt = (
+    select(u_subq.c.name, address_table.c.email_address).
+    join_from(address_table, u_subq).
+    order_by(u_subq.c.name, address_table.c.email_address)
+)
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    print(result.all())
 ```
 
 (sqlatutorial:exists)=
@@ -1139,28 +1006,18 @@ generate an EXISTS subquery and is most conveniently generated using the
 can return `user_account` rows that have more than one related row in
 `address`:
 
-```python
->>> subq = (
-...     select(func.count(address_table.c.id)).
-...     where(user_table.c.id == address_table.c.user_id).
-...     group_by(address_table.c.user_id).
-...     having(func.count(address_table.c.id) > 1)
-... ).exists()
->>> with engine.connect() as conn:
-...     result = conn.execute(
-...         select(user_table.c.name).where(subq)
-...     )
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT user_account.name
-FROM user_account
-WHERE EXISTS (SELECT count(address.id) AS count_1
-FROM address
-WHERE user_account.id = address.user_id GROUP BY address.user_id
-HAVING count(address.id) > ?)
-[...] (1,){stop}
-[('sandy',)]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+subq = (
+    select(func.count(address_table.c.id)).
+    where(user_table.c.id == address_table.c.user_id).
+    group_by(address_table.c.user_id).
+    having(func.count(address_table.c.id) > 1)
+).exists()
+with engine.connect() as conn:
+    result = conn.execute(
+        select(user_table.c.name).where(subq)
+    )
+    print(result.all())
 ```
 
 The EXISTS construct is more often than not used as a negation, e.g. NOT EXISTS,
@@ -1169,25 +1026,16 @@ table has no rows.  Below we select user names that have no email addresses;
 note the binary negation operator (`~`) used inside the second WHERE
 clause:
 
-```python
->>> subq = (
-...     select(address_table.c.id).
-...     where(user_table.c.id == address_table.c.user_id)
-... ).exists()
->>> with engine.connect() as conn:
-...     result = conn.execute(
-...         select(user_table.c.name).where(~subq)
-...     )
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT user_account.name
-FROM user_account
-WHERE NOT (EXISTS (SELECT address.id
-FROM address
-WHERE user_account.id = address.user_id))
-[...] (){stop}
-[('patrick',)]
-{opensql}ROLLBACK{stop}
+```{code-cell} ipython3
+subq = (
+    select(address_table.c.id).
+    where(user_table.c.id == address_table.c.user_id)
+).exists()
+with engine.connect() as conn:
+    result = conn.execute(
+        select(user_table.c.name).where(~subq)
+    )
+    print(result.all())
 ```
 
 (sqlatutorial:functions)=
@@ -1204,51 +1052,35 @@ possibly some arguments. Examples of typical SQL functions include:
 - the `count()` function, an aggregate function which counts how many
   rows are returned:
 
-  ```python
-  >>> print(select(func.count()).select_from(user_table))
-  SELECT count(*) AS count_1
-  FROM user_account
-  ```
-
-  %
+```{code-cell} ipython3
+print(select(func.count()).select_from(user_table))
+```
 
 - the `lower()` function, a string function that converts a string to lower
   case:
 
-  ```python
-  >>> print(select(func.lower("A String With Much UPPERCASE")))
-  SELECT lower(:lower_2) AS lower_1
-  ```
-
-  %
+```{code-cell} ipython3
+print(select(func.lower("A String With Much UPPERCASE")))
+```
 
 - the `now()` function, which provides for the current date and time; as this
   is a common function, SQLAlchemy knows how to render this differently for each
   backend, in the case of SQLite using the CURRENT_TIMESTAMP function:
 
-  ```python
-  >>> stmt = select(func.now())
-  >>> with engine.connect() as conn:
-  ...     result = conn.execute(stmt)
-  ...     print(result.all())
-  {opensql}BEGIN (implicit)
-  SELECT CURRENT_TIMESTAMP AS now_1
-  [...] ()
-  [(datetime.datetime(...),)]
-  ROLLBACK
-  ```
-
-  %
+```{code-cell} ipython3
+stmt = select(func.now())
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    print(result.all())
+```
 
 As most database backends feature dozens if not hundreds of different SQL
 functions, {data}`~sqlalchemy.sql.expression.func` tries to be as liberal as possible in what it
 accepts. Any name that is accessed from this namespace is automatically
 considered to be a SQL function that will render in a generic way:
 
-```
->>> print(select(func.some_crazy_function(user_table.c.name, 17)))
-SELECT some_crazy_function(user_account.name, :some_crazy_function_2) AS some_crazy_function_1
-FROM user_account
+```{code-cell} ipython3
+print(select(func.some_crazy_function(user_table.c.name, 17)))
 ```
 
 At the same time, a relatively small set of extremely common SQL functions such
@@ -1259,14 +1091,14 @@ generation in some cases.  The example below contrasts the SQL generation
 that occurs for the PostgreSQL dialect compared to the Oracle dialect for
 the {class}`~sqlalchemy.sql.functions.now` function:
 
+```{code-cell} ipython3
+from sqlalchemy.dialects import postgresql
+print(select(func.now()).compile(dialect=postgresql.dialect()))
 ```
->>> from sqlalchemy.dialects import postgresql
->>> print(select(func.now()).compile(dialect=postgresql.dialect()))
-SELECT now() AS now_1
 
->>> from sqlalchemy.dialects import oracle
->>> print(select(func.now()).compile(dialect=oracle.dialect()))
-SELECT CURRENT_TIMESTAMP AS now_1 FROM DUAL
+```{code-cell} ipython3
+from sqlalchemy.dialects import oracle
+print(select(func.now()).compile(dialect=oracle.dialect()))
 ```
 
 ### Functions Have Return Types
@@ -1282,9 +1114,8 @@ The SQL return type of any SQL function may be accessed, typically for
 debugging purposes, by referring to the {attr}`~sqlalchemy.sql.functions.Function.type`
 attribute:
 
-```
->>> func.now().type
-DateTime()
+```{code-cell} ipython3
+func.now().type
 ```
 
 These SQL return types are significant when making
@@ -1311,19 +1142,18 @@ below we pass the {class}`~sqlalchemy.types.JSON` class to generate the PostgreS
 `json_object()` function, noting that the SQL return type will be of
 type JSON:
 
-```
->>> from sqlalchemy import JSON
->>> function_expr = func.json_object('{a, 1, b, "def", c, 3.5}', type_=JSON)
+```{code-cell} ipython3
+from sqlalchemy import JSON
+function_expr = func.json_object('{a, 1, b, "def", c, 3.5}', type_=JSON)
 ```
 
 By creating our JSON function with the {class}`~sqlalchemy.types.JSON` datatype, the
 SQL expression object takes on JSON-related features, such as that of accessing
 elements:
 
-```
->>> stmt = select(function_expr["def"])
->>> print(stmt)
-SELECT json_object(:json_object_1)[:json_object_2] AS anon_1
+```{code-cell} ipython3
+stmt = select(function_expr["def"])
+print(stmt)
 ```
 
 ### Built-in Functions Have Pre-Configured Return Types
@@ -1336,32 +1166,32 @@ sometimes based on usage. The {class}`~sqlalchemy.sql.functions.max` function an
 aggregate filtering functions will set up the SQL return type based on the
 argument given:
 
+```{code-cell} ipython3
+m1 = func.max(Column("some_int", Integer))
+m1.type
 ```
->>> m1 = func.max(Column("some_int", Integer))
->>> m1.type
-Integer()
 
->>> m2 = func.max(Column("some_str", String))
->>> m2.type
-String()
+```{code-cell} ipython3
+m2 = func.max(Column("some_str", String))
+m2.type
 ```
 
 Date and time functions typically correspond to SQL expressions described by
 {class}`~sqlalchemy.types.DateTime`, {class}`~sqlalchemy.types.Date` or {class}`~sqlalchemy.types.Time`:
 
+```{code-cell} ipython3
+func.now().type
 ```
->>> func.now().type
-DateTime()
->>> func.current_date().type
-Date()
+
+```{code-cell} ipython3
+func.current_date().type
 ```
 
 A known string function such as {class}`~sqlalchemy.sql.functions.concat`
 will know that a SQL expression would be of type {class}`~sqlalchemy.types.String`:
 
-```
->>> func.concat("x", "y").type
-String()
+```{code-cell} ipython3
+func.concat("x", "y").type
 ```
 
 However, for the vast majority of SQL functions, SQLAlchemy does not have them
@@ -1370,9 +1200,8 @@ while there is typically no issue using SQL functions `func.lower()`
 and `func.upper()` to convert the casing of strings, SQLAlchemy doesn't
 actually know about these functions, so they have a "null" SQL return type:
 
-```
->>> func.upper("lowercase").type
-NullType()
+```{code-cell} ipython3
+func.upper("lowercase").type
 ```
 
 For simple functions like `upper` and `lower`, the issue is not usually
@@ -1382,9 +1211,8 @@ coercion rules can often correctly guess intent as well; the Python `+`
 operator for example will be correctly interpreted as the string concatenation
 operator based on looking at both sides of the expression:
 
-```
->>> print(select(func.upper("lowercase") + " suffix"))
-SELECT upper(:upper_1) || :upper_2 AS anon_1
+```{code-cell} ipython3
+print(select(func.upper("lowercase") + " suffix"))
 ```
 
 Overall, the scenario where the
@@ -1394,17 +1222,15 @@ Overall, the scenario where the
    evidenced by creating the function and observing the {attr}`~sqlalchemy.sql.functions.Function.type`
    attribute, that is:
 
-   ```
-   >>> func.count().type
+   ```python
+   func.count().type
    Integer()
    ```
 
-   %
-
    vs.:
 
-   ```
-   >>> func.json_object('{"a", "b"}').type
+   ```python
+   func.json_object('{"a", "b"}').type
    NullType()
    ```
 
@@ -1442,43 +1268,29 @@ A common function used with window functions is the `row_number()` function
 which simply counts rows. We may partition this row count against user name to
 number the email addresses of individual users:
 
-```python
->>> stmt = select(
-...     func.row_number().over(partition_by=user_table.c.name),
-...     user_table.c.name,
-...     address_table.c.email_address
-... ).select_from(user_table).join(address_table)
->>> with engine.connect() as conn:  # doctest:+SKIP
-...     result = conn.execute(stmt)
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT row_number() OVER (PARTITION BY user_account.name) AS anon_1,
-user_account.name, address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
-[...] ()
-[(1, 'sandy', 'sandy@sqlalchemy.org'), (2, 'sandy', 'sandy@squirrelpower.org'), (1, 'spongebob', 'spongebob@sqlalchemy.org')]
-ROLLBACK
+```{code-cell} ipython3
+stmt = select(
+    func.row_number().over(partition_by=user_table.c.name),
+    user_table.c.name,
+    address_table.c.email_address
+).select_from(user_table).join(address_table)
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    print(result.all())
 ```
 
 Above, the {paramref}`~sqlalchemy.sql.functions.FunctionElement.over.partition_by` parameter
 is used so that the `PARTITION BY` clause is rendered within the OVER clause.
 We also may make use of the `ORDER BY` clause using {paramref}`~sqlalchemy.sql.functions.FunctionElement.over.order_by`:
 
-```python
->>> stmt = select(
-...     func.count().over(order_by=user_table.c.name),
-...     user_table.c.name,
-...     address_table.c.email_address).select_from(user_table).join(address_table)
->>> with engine.connect() as conn:  # doctest:+SKIP
-...     result = conn.execute(stmt)
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT count(*) OVER (ORDER BY user_account.name) AS anon_1,
-user_account.name, address.email_address
-FROM user_account JOIN address ON user_account.id = address.user_id
-[...] ()
-[(2, 'sandy', 'sandy@sqlalchemy.org'), (2, 'sandy', 'sandy@squirrelpower.org'), (3, 'spongebob', 'spongebob@sqlalchemy.org')]
-ROLLBACK
+```{code-cell} ipython3
+stmt = select(
+    func.count().over(order_by=user_table.c.name),
+    user_table.c.name,
+    address_table.c.email_address).select_from(user_table).join(address_table)
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    print(result.all())
 ```
 
 Further options for window functions include usage of ranges; see
@@ -1505,34 +1317,26 @@ and `rank()`.  SQLAlchemy includes built in implementations
 {class}`~sqlalchemy.sql.functions.percentile_disc` which include a {meth}`~sqlalchemy.sql.functions.FunctionElement.within_group`
 method:
 
-```
->>> print(
-...     func.unnest(
-...         func.percentile_disc([0.25,0.5,0.75,1]).within_group(user_table.c.name)
-...     )
-... )
-unnest(percentile_disc(:percentile_disc_1) WITHIN GROUP (ORDER BY user_account.name))
+```{code-cell} ipython3
+print(
+    func.unnest(
+        func.percentile_disc([0.25,0.5,0.75,1]).within_group(user_table.c.name)
+    )
+)
 ```
 
 "FILTER" is supported by some backends to limit the range of an aggregate function to a
 particular subset of rows compared to the total range of rows returned, available
 using the {meth}`~sqlalchemy.sql.functions.FunctionElement.filter` method:
 
-```
->>> stmt = select(
-...     func.count(address_table.c.email_address).filter(user_table.c.name == 'sandy'),
-...     func.count(address_table.c.email_address).filter(user_table.c.name == 'spongebob')
-... ).select_from(user_table).join(address_table)
->>> with engine.connect() as conn:  # doctest:+SKIP
-...     result = conn.execute(stmt)
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT count(address.email_address) FILTER (WHERE user_account.name = ?) AS anon_1,
-count(address.email_address) FILTER (WHERE user_account.name = ?) AS anon_2
-FROM user_account JOIN address ON user_account.id = address.user_id
-[...] ('sandy', 'spongebob')
-[(2, 1)]
-ROLLBACK
+```{code-cell} ipython3
+stmt = select(
+    func.count(address_table.c.email_address).filter(user_table.c.name == 'sandy'),
+    func.count(address_table.c.email_address).filter(user_table.c.name == 'spongebob')
+).select_from(user_table).join(address_table)
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    print(result.all())
 ```
 
 (sqlatutorial:functions-table-valued)=
@@ -1566,19 +1370,12 @@ introduced at {ref}`sqlatutorial:using-aliases`. Below we illustrate the
 `json_each()` function, which while common on PostgreSQL is also supported by
 modern versions of SQLite:
 
-```
->>> onetwothree = func.json_each('["one", "two", "three"]').table_valued("value")
->>> stmt = select(onetwothree).where(onetwothree.c.value.in_(["two", "three"]))
->>> with engine.connect() as conn:  # doctest:+SKIP
-...     result = conn.execute(stmt)
-...     print(result.all())
-{opensql}BEGIN (implicit)
-SELECT anon_1.value
-FROM json_each(?) AS anon_1
-WHERE anon_1.value IN (?, ?)
-[...] ('["one", "two", "three"]', 'two', 'three')
-[('two',), ('three',)]
-ROLLBACK
+```{code-cell} ipython3
+onetwothree = func.json_each('["one", "two", "three"]').table_valued("value")
+stmt = select(onetwothree).where(onetwothree.c.value.in_(["two", "three"]))
+with engine.connect() as conn:
+    result = conn.execute(stmt)
+    print(result.all())
 ```
 
 Above, we used the `json_each()` JSON function supported by SQLite and
@@ -1606,23 +1403,19 @@ SQLAlchemy refers to this as a "column valued" function and is available
 by applying the {meth}`~sqlalchemy.sql.functions.FunctionElement.column_valued` modifier
 to a {class}`~sqlalchemy.sql.functions.Function` construct:
 
-```
->>> from sqlalchemy import select, func
->>> stmt = select(func.json_array_elements('["one", "two"]').column_valued("x"))
->>> print(stmt)
-SELECT x
-FROM json_array_elements(:json_array_elements_1) AS x
+```{code-cell} ipython3
+from sqlalchemy import select, func
+stmt = select(func.json_array_elements('["one", "two"]').column_valued("x"))
+print(stmt)
 ```
 
 The "column valued" form is also supported by the Oracle dialect, where
 it is usable for custom SQL functions:
 
-```
->>> from sqlalchemy.dialects import oracle
->>> stmt = select(func.scalar_strings(5).column_valued("s"))
->>> print(stmt.compile(dialect=oracle.dialect()))
-SELECT COLUMN_VALUE s
-FROM TABLE (scalar_strings(:scalar_strings_1)) s
+```{code-cell} ipython3
+from sqlalchemy.dialects import oracle
+stmt = select(func.scalar_strings(5).column_valued("s"))
+print(stmt.compile(dialect=oracle.dialect()))
 ```
 
 :::{seealso}

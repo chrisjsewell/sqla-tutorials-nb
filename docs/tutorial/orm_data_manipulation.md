@@ -1,3 +1,14 @@
+---
+jupytext:
+  text_representation:
+    extension: .md
+    format_name: myst
+kernelspec:
+  display_name: Python 3
+  language: python
+  name: python3
+---
+
 (sqlatutorial:orm-data-manipulation)=
 
 # Data Manipulation with the ORM
@@ -14,6 +25,57 @@ two previous ORM-centric sections in this document:
 - {ref}`sqlatutorial:executing-orm-session` - introduces how to make an ORM {class}`~sqlalchemy.orm.Session` object
 - {ref}`sqlatutorial:orm-table-metadata` - where we set up our ORM mappings of the `User` and `Address` entities
 - {ref}`sqlatutorial:selecting-orm-entities` - a few examples on how to run SELECT statements for entities like `User`
+
+```{code-cell} ipython3
+:tags: [hide-output]
+
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, ForeignKey, select, insert, update, delete
+from sqlalchemy.orm import declarative_base, Session
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = 'user_account'
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(30))
+    fullname = Column(String)
+
+    def __repr__(self):
+        return f"User({self.name!r}, {self.fullname!r})"
+
+class Address(Base):
+    __tablename__ = 'address'
+
+    id = Column(Integer, primary_key=True)
+    email_address = Column(String, nullable=False)
+    user_id = Column(Integer, ForeignKey('user_account.id'))
+
+    def __repr__(self):
+        return f"Address({self.email_address!r})"
+
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+Base.metadata.create_all(engine)
+
+with engine.begin() as conn:
+    conn.execute(
+        insert(User),
+        [
+            {"id": 1, "name": "spongebob", "fullname": "Spongebob Squarepants"},
+            {"id": 2, "name": "sandy", "fullname": "Sandy Cheeks"},
+            {"id": 3, "name": "patrick", "fullname": "Patrick Star"}
+        ]
+    )
+with engine.begin() as conn:
+    conn.execute(
+        insert(Address),
+        [
+            {"user_id": 1, "email_address": "spongebob@sqlalchemy.org"},
+            {"user_id": 2, "email_address": "sandy@sqlalchemy.org"},
+            {"user_id": 2, "email_address": "sandy@squirrelpower.org"},
+        ]
+    )
+```
 
 (sqlatutorial:inserting-orm)=
 
@@ -38,9 +100,9 @@ data objects that we use to create and manipulate rows within a transaction
 as well.  Below we will create two `User` objects each representing a
 potential database row to be INSERTed:
 
-```
->>> squidward = User(name="squidward", fullname="Squidward Tentacles")
->>> krabs = User(name="ehkrabs", fullname="Eugene H. Krabs")
+```{code-cell} ipython3
+squidward = User(name="squidward", fullname="Squidward Tentacles")
+krabs = User(name="ehkrabs", fullname="Eugene H. Krabs")
 ```
 
 We are able to construct these objects using the names of the mapped columns as
@@ -56,9 +118,8 @@ SQLite in this case, which the ORM also integrates with.
 The value of the `id` attribute on the above
 objects, if we were to view it, displays itself as `None`:
 
-```
->>> squidward
-User(id=None, name='squidward', fullname='Squidward Tentacles')
+```{code-cell} ipython3
+squidward
 ```
 
 The `None` value is provided by SQLAlchemy to indicate that the attribute
@@ -74,28 +135,26 @@ INSERT statements for them.
 ### Adding objects to a Session
 
 To illustrate the addition process step by step, we will create a
-{class}`~sqlalchemy.orm.Session` without using a context manager (and hence we must
-make sure we close it later!):
+{class}`~sqlalchemy.orm.Session` without using a context manager (and hence we must make sure we close it later!):
 
-```
->>> session = Session(engine)
+```{code-cell} ipython3
+session = Session(engine)
 ```
 
 The objects are then added to the {class}`~sqlalchemy.orm.Session` using the
 {meth}`~sqlalchemy.orm.Session.add` method.   When this is called, the objects are in a
 state known as {term}`pending` and have not been inserted yet:
 
-```
->>> session.add(squidward)
->>> session.add(krabs)
+```{code-cell} ipython3
+session.add(squidward)
+session.add(krabs)
 ```
 
 When we have pending objects, we can see this state by looking at a
 collection on the {class}`~sqlalchemy.orm.Session` called {attr}`~sqlalchemy.orm.Session.new`:
 
-```
->>> session.new
-IdentitySet([User(id=None, name='squidward', fullname='Squidward Tentacles'), User(id=None, name='ehkrabs', fullname='Eugene H. Krabs')])
+```{code-cell} ipython3
+session.new
 ```
 
 The above view is using a collection called {class}`~sqlalchemy.sql.schema.Identity` that is
@@ -114,13 +173,8 @@ to push out the current set of changes, the process is known as a **flush**.
 We can illustrate the flush process manually by calling the {meth}`~sqlalchemy.orm.Session.flush`
 method:
 
-```python
->>> session.flush()
-{opensql}BEGIN (implicit)
-INSERT INTO user_account (name, fullname) VALUES (?, ?)
-[...] ('squidward', 'Squidward Tentacles')
-INSERT INTO user_account (name, fullname) VALUES (?, ?)
-[...] ('ehkrabs', 'Eugene H. Krabs')
+```{code-cell} ipython3
+session.flush()
 ```
 
 Above we observe the {class}`~sqlalchemy.orm.Session` was first called upon to emit SQL,
@@ -149,11 +203,12 @@ introduced previously.   The `squidward` and `krabs` objects now have these new
 primary key identifiers associated with them and we can view them by acesssing
 the `id` attribute:
 
+```{code-cell} ipython3
+squidward.id
 ```
->>> squidward.id
-4
->>> krabs.id
-5
+
+```{code-cell} ipython3
+krabs.id
 ```
 
 :::{tip}
@@ -181,10 +236,9 @@ identity.   We can observe this by retrieving one of the above objects
 using the {meth}`~sqlalchemy.orm.Session.get` method, which will return an entry
 from the identity map if locally present, otherwise emitting a SELECT:
 
-```
->>> some_squidward = session.get(User, 4)
->>> some_squidward
-User(id=4, name='squidward', fullname='Squidward Tentacles')
+```{code-cell} ipython3
+some_squidward = session.get(User, 4)
+some_squidward
 ```
 
 The important thing to note about the identity map is that it maintains a
@@ -193,9 +247,8 @@ identity, within the scope of a particular {class}`~sqlalchemy.orm.Session` obje
 may observe that the `some_squidward` refers to the **same object** as that
 of `squidward` previously:
 
-```
->>> some_squidward is squidward
-True
+```{code-cell} ipython3
+some_squidward is squidward
 ```
 
 The identity map is a critical feature that allows complex sets of objects
@@ -208,9 +261,8 @@ be discussed further.   For now we will commit the transaction so that
 we can build up knowledge on how to SELECT rows before examining more ORM
 behaviors and features:
 
-```python
->>> session.commit()
-COMMIT
+```{code-cell} ipython3
+session.commit()
 ```
 
 (sqlatutorial:orm-updating)=
@@ -231,37 +283,30 @@ Supposing we loaded the `User` object for the username `sandy` into
 a transaction (also showing off the {meth}`~sqlalchemy.sql.expression.Select.filter_by` method
 as well as the {meth}`~sqlalchemy.engine.Result.scalar_one` method):
 
-```python
-{sql}>>> sandy = session.execute(select(User).filter_by(name="sandy")).scalar_one()
-BEGIN (implicit)
-SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = ?
-[...] ('sandy',)
+```{code-cell} ipython3
+sandy = session.execute(select(User).filter_by(name="sandy")).scalar_one()
 ```
 
 The Python object `sandy` as mentioned before acts as a **proxy** for the
 row in the database, more specifically the database row **in terms of the
 current transaction**, that has the primary key identity of `2`:
 
-```
->>> sandy
-User(id=2, name='sandy', fullname='Sandy Cheeks')
+```{code-cell} ipython3
+sandy
 ```
 
 If we alter the attributes of this object, the {class}`~sqlalchemy.orm.Session` tracks
 this change:
 
-```
->>> sandy.fullname = "Sandy Squirrel"
+```{code-cell} ipython3
+sandy.fullname = "Sandy Squirrel"
 ```
 
 The object appears in a collection called {attr}`~sqlalchemy.orm.Session.dirty`, indicating
 the object is "dirty":
 
-```
->>> sandy in session.dirty
-True
+```{code-cell} ipython3
+sandy in session.dirty
 ```
 
 When the {class}`~sqlalchemy.orm.Session` next emits a flush, an UPDATE will be emitted
@@ -270,18 +315,11 @@ occurs automatically before we emit any SELECT, using a behavior known as
 **autoflush**.  We can query directly for the `User.fullname` column
 from this row and we will get our updated value back:
 
-```python
->>> sandy_fullname = session.execute(
-...     select(User.fullname).where(User.id == 2)
-... ).scalar_one()
-{opensql}UPDATE user_account SET fullname=? WHERE user_account.id = ?
-[...] ('Sandy Squirrel', 2)
-SELECT user_account.fullname
-FROM user_account
-WHERE user_account.id = ?
-[...] (2,){stop}
->>> print(sandy_fullname)
-Sandy Squirrel
+```{code-cell} ipython3
+sandy_fullname = session.execute(
+    select(User.fullname).where(User.id == 2)
+).scalar_one()
+print(sandy_fullname)
 ```
 
 We can see above that we requested that the {class}`~sqlalchemy.orm.Session` execute
@@ -290,9 +328,8 @@ that an UPDATE were emitted as well, which was the flush process pushing
 out pending changes.  The `sandy` Python object is now no longer considered
 dirty:
 
-```
->>> sandy in session.dirty
-False
+```{code-cell} ipython3
+sandy in session.dirty
 ```
 
 However note we are **still in a transaction** and our changes have not
@@ -315,15 +352,12 @@ of a generic SQL UPDATE statement that can affect many rows at once.   For examp
 to emit an UPDATE that will change the `User.fullname` column based on
 a value in the `User.name` column:
 
-```python
->>> session.execute(
-...     update(User).
-...     where(User.name == "sandy").
-...     values(fullname="Sandy Squirrel Extraordinaire")
-... )
-{opensql}UPDATE user_account SET fullname=? WHERE user_account.name = ?
-[...] ('Sandy Squirrel Extraordinaire', 'sandy'){stop}
-<sqlalchemy.engine.cursor.CursorResult object ...>
+```{code-cell} ipython3
+session.execute(
+    update(User).
+    where(User.name == "sandy").
+    values(fullname="Sandy Squirrel Extraordinaire")
+)
 ```
 
 When invoking the ORM-enabled UPDATE statement, special logic is used to locate
@@ -331,9 +365,8 @@ objects in the current session that match the given criteria, so that they
 are refreshed with the new data.  Above, the `sandy` object identity
 was located in memory and refreshed:
 
-```
->>> sandy.fullname
-'Sandy Squirrel Extraordinaire'
+```{code-cell} ipython3
+sandy.fullname
 ```
 
 The refresh logic is known as the `synchronize_session` option, and is described
@@ -352,38 +385,22 @@ To round out the basic persistence operations, an individual ORM object
 may be marked for deletion by using the {meth}`~sqlalchemy.orm.Session.delete` method.
 Let's load up `patrick` from the database:
 
-```python
-{sql}>>> patrick = session.get(User, 3)
-SELECT user_account.id AS user_account_id, user_account.name AS user_account_name,
-user_account.fullname AS user_account_fullname
-FROM user_account
-WHERE user_account.id = ?
-[...] (3,)
+```{code-cell} ipython3
+patrick = session.get(User, 3)
 ```
 
 If we mark `patrick` for deletion, as is the case with other operations,
 nothing actually happens yet until a flush proceeds:
 
-```
->>> session.delete(patrick)
+```{code-cell} ipython3
+session.delete(patrick)
 ```
 
 Current ORM behavior is that `patrick` stays in the {class}`~sqlalchemy.orm.Session`
 until the flush proceeds, which as mentioned before occurs if we emit a query:
 
-```python
->>> session.execute(select(User).where(User.name == "patrick")).first()
-{opensql}SELECT address.id AS address_id, address.email_address AS address_email_address,
-address.user_id AS address_user_id
-FROM address
-WHERE ? = address.user_id
-[...] (3,)
-DELETE FROM user_account WHERE user_account.id = ?
-[...] (3,)
-SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = ?
-[...] ('patrick',)
+```{code-cell} ipython3
+session.execute(select(User).where(User.name == "patrick")).first()
 ```
 
 Above, the SELECT we asked to emit was preceded by a DELETE, which indicated
@@ -404,9 +421,8 @@ Beyond that, the `patrick` object instance now being deleted is no longer
 considered to be persistent within the {class}`~sqlalchemy.orm.Session`, as is shown
 by the containment check:
 
-```
->>> patrick in session
-False
+```{code-cell} ipython3
+patrick in session
 ```
 
 However just like the UPDATEs we made to the `sandy` object, every change
@@ -424,20 +440,11 @@ illustrate by using the {func}`~sqlalchemy.sql.expression.delete` construct with
 objects (see {term}`expired`) that match the given deletion criteria will be
 automatically marked as "{term}`deleted`" in the {class}`~sqlalchemy.orm.Session`:
 
-```python
->>> # refresh the target object for demonstration purposes
->>> # only, not needed for the DELETE
-{sql}>>> squidward = session.get(User, 4)
-SELECT user_account.id AS user_account_id, user_account.name AS user_account_name,
-user_account.fullname AS user_account_fullname
-FROM user_account
-WHERE user_account.id = ?
-[...] (4,){stop}
-
->>> session.execute(delete(User).where(User.name == "squidward"))
-{opensql}DELETE FROM user_account WHERE user_account.name = ?
-[...] ('squidward',){stop}
-<sqlalchemy.engine.cursor.CursorResult object at 0x...>
+```{code-cell} ipython3
+# refresh the target object for demonstration purposes
+# only, not needed for the DELETE
+squidward = session.get(User, 4)
+session.execute(delete(User).where(User.name == "squidward"))
 ```
 
 The `squidward` identity, like that of `patrick`, is now also in a
@@ -446,9 +453,8 @@ to demonstrate this; if the object were expired, the DELETE operation
 would not take the time to refresh expired objects just to see that they
 had been deleted:
 
-```
->>> squidward in session
-False
+```{code-cell} ipython3
+squidward in session
 ```
 
 ## Rolling Back
@@ -464,60 +470,43 @@ Squirrel"`, we want to roll back this change.   Calling
 which will have the effect that they will refresh themselves when next accessed
 using a process known as {term}`lazy loading`:
 
-```python
->>> session.rollback()
-ROLLBACK
+```{code-cell} ipython3
+session.rollback()
 ```
 
 To view the "expiration" process more closely, we may observe that the
 Python object `sandy` has no state left within its Python `__dict__`,
 with the exception of a special SQLAlchemy internal state object:
 
-```
->>> sandy.__dict__
-{'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x...>}
+```{code-cell} ipython3
+sandy.__dict__
 ```
 
 This is the "{term}`expired`" state; accessing the attribute again will autobegin
 a new transaction and refresh `sandy` with the current database row:
 
-```python
->>> sandy.fullname
-{opensql}BEGIN (implicit)
-SELECT user_account.id AS user_account_id, user_account.name AS user_account_name,
-user_account.fullname AS user_account_fullname
-FROM user_account
-WHERE user_account.id = ?
-[...] (2,){stop}
-'Sandy Cheeks'
+```{code-cell} ipython3
+sandy.fullname
 ```
 
 We may now observe that the full database row was also populated into the
 `__dict__` of the `sandy` object:
 
-```
->>> sandy.__dict__  # doctest: +SKIP
-{'_sa_instance_state': <sqlalchemy.orm.state.InstanceState object at 0x...>,
- 'id': 2, 'name': 'sandy', 'fullname': 'Sandy Cheeks'}
+```{code-cell} ipython3
+sandy.__dict__
 ```
 
 For deleted objects, when we earlier noted that `patrick` was no longer
 in the session, that object's identity is also restored:
 
-```
->>> patrick in session
-True
+```{code-cell} ipython3
+patrick in session
 ```
 
 and of course the database data is present again as well:
 
-```python
-{sql}>>> session.execute(select(User).where(User.name == 'patrick')).scalar_one() is patrick
-SELECT user_account.id, user_account.name, user_account.fullname
-FROM user_account
-WHERE user_account.name = ?
-[...] ('patrick',){stop}
-True
+```{code-cell} ipython3
+session.execute(select(User).where(User.name == 'patrick')).scalar_one() is patrick
 ```
 
 ## Closing a Session
@@ -527,9 +516,8 @@ of a Python context manager, that is, we didn't use the `with` statement.
 That's fine, however if we are doing things this way, it's best that we explicitly
 close out the {class}`~sqlalchemy.orm.Session` when we are done with it:
 
-```python
->>> session.close()
-{opensql}ROLLBACK
+```{code-cell} ipython3
+session.close()
 ```
 
 Closing the {class}`~sqlalchemy.orm.Session`, which is what happens when we use it in
@@ -538,53 +526,42 @@ a context manager as well, accomplishes the following things:
 - It {term}`releases` all connection resources to the connection pool, cancelling
   out (e.g. rolling back) any transactions that were in progress.
 
-  This means that when we make use of a session to perform some read-only
-  tasks and then close it, we don't need to explicitly call upon
-  {meth}`~sqlalchemy.orm.Session.rollback` to make sure the transaction is rolled back;
-  the connection pool handles this.
+This means that when we make use of a session to perform some read-only
+tasks and then close it, we don't need to explicitly call upon
+{meth}`~sqlalchemy.orm.Session.rollback` to make sure the transaction is rolled back;
+the connection pool handles this.
 
 - It **expunges** all objects from the {class}`~sqlalchemy.orm.Session`.
 
-  This means that all the Python objects we had loaded for this {class}`~sqlalchemy.orm.Session`,
-  like `sandy`, `patrick` and `squidward`, are now in a state known
-  as {term}`detached`.  In particular, we will note that objects that were still
-  in an {term}`expired` state, for example due to the call to {meth}`~sqlalchemy.orm.Session.commit`,
-  are now non-functional, as they don't contain the state of a current row and
-  are no longer associated with any database transaction in which to be
-  refreshed:
+This means that all the Python objects we had loaded for this {class}`~sqlalchemy.orm.Session`,
+like `sandy`, `patrick` and `squidward`, are now in a state known
+as {term}`detached`.  In particular, we will note that objects that were still
+in an {term}`expired` state, for example due to the call to {meth}`~sqlalchemy.orm.Session.commit`,
+are now non-functional, as they don't contain the state of a current row and
+are no longer associated with any database transaction in which to be
+refreshed:
 
-  ```
-  >>> squidward.name
-  Traceback (most recent call last):
-    ...
-  sqlalchemy.orm.exc.DetachedInstanceError: Instance <User at 0x...> is not bound to a Session; attribute refresh operation cannot proceed
-  ```
+```{code-cell} ipython3
+:tags: [raises-exception]
 
-  The detached objects can be re-associated with the same, or a new
-  {class}`~sqlalchemy.orm.Session` using the {meth}`~sqlalchemy.orm.Session.add` method, which
-  will re-establish their relationship with their particular database row:
+squidward.name
+```
 
-  ```python
-  >>> session.add(squidward)
-  >>> squidward.name
-  {opensql}BEGIN (implicit)
-  SELECT user_account.id AS user_account_id, user_account.name AS user_account_name, user_account.fullname AS user_account_fullname
-  FROM user_account
-  WHERE user_account.id = ?
-  [...] (4,){stop}
-  'squidward'
-  ```
+The detached objects can be re-associated with the same, or a new
+{class}`~sqlalchemy.orm.Session` using the {meth}`~sqlalchemy.orm.Session.add` method, which
+will re-establish their relationship with their particular database row:
 
-  %
+```{code-cell} ipython3
+session.add(squidward)
+squidward.name
+```
 
-  :::{tip}
-  Try to avoid using objects in their detached state, if possible. When the
-  {class}`~sqlalchemy.orm.Session` is closed, clean up references to all the
-  previously attached objects as well.   For cases where detached objects
-  are necessary, typically the immediate display of just-committed objects
-  for a web application where the {class}`~sqlalchemy.orm.Session` is closed before
-  the view is rendered, set the {paramref}`~sqlalchemy.orm.Session.expire_on_commit`
-  flag to `False`.
-  :::
-
-  %
+:::{tip}
+Try to avoid using objects in their detached state, if possible. When the
+{class}`~sqlalchemy.orm.Session` is closed, clean up references to all the
+previously attached objects as well.   For cases where detached objects
+are necessary, typically the immediate display of just-committed objects
+for a web application where the {class}`~sqlalchemy.orm.Session` is closed before
+the view is rendered, set the {paramref}`~sqlalchemy.orm.Session.expire_on_commit`
+flag to `False`.
+:::

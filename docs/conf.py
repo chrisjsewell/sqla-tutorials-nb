@@ -1,9 +1,9 @@
 """Sphinx configuration"""
 project = "SQLAlchemy Tutorial"
 
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", '**.ipynb_checkpoints']
 
-extensions = ["myst_parser", "sphinx.ext.intersphinx", "sphinx_design"]
+extensions = ["myst_nb", "sphinx.ext.intersphinx", "sphinx_copybutton", "sphinx_design"]
 
 myst_enable_extensions = ["colon_fence"]
 
