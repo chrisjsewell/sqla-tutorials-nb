@@ -1,5 +1,5 @@
 sqlalchemy==1.4.22
-myst-nb~=0.13.0
+myst-nb~=0.13.1
 sphinx-book-theme
 sphinx-design
 sphinx-copybutton

@@ -8,6 +8,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 extensions = ["myst_nb", "sphinx.ext.intersphinx", "sphinx_copybutton", "sphinx_design", "sphinx_thebe"]
 
 myst_enable_extensions = ["colon_fence"]
+nb_merge_streams = True
 execution_show_tb = "READTHEDOCS" in os.environ
 
 intersphinx_mapping = {
