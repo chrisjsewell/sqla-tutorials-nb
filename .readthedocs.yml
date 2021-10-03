@@ -1,0 +1,11 @@
+version: 2
+
+python:
+    version: "3.8"
+    install:
+    - requirements: requirements.txt
+
+# Let the build fail if there are any warnings
+sphinx:
+    builder: html
+    fail_on_warning: true
