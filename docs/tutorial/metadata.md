@@ -1,4 +1,4 @@
-(tutorial-working-with-metadata)=
+(sqlatutorial:working-with-metadata)=
 
 # Working with Database Metadata
 
@@ -10,41 +10,42 @@ concepts like tables and columns.   These objects are known collectively
 as {term}`database metadata`.
 
 The most common foundational objects for database metadata in SQLAlchemy are
-known as  {class}`_schema.MetaData`, {class}`_schema.Table`, and {class}`_schema.Column`.
+known as  {class}`~sqlalchemy.schema.MetaData`, {class}`~sqlalchemy.schema.Table`, and {class}`~sqlalchemy.schema.Column`.
 The sections below will illustrate how these objects are used in both a
 Core-oriented style as well as an ORM-oriented style.
 
-:::{container} orm-header
+:::{div} orm-header
+
 **ORM readers, stay with us!**
 
 As with other sections, Core users can skip the ORM sections, but ORM users
 would best be familiar with these objects from both perspectives.
 :::
 
-```{eval-rst}
+<!--
 .. rst-class:: core-header
-```
+-->
 
-(tutorial-core-metadata)=
+(sqlatutorial:core-metadata)=
 
 ## Setting up MetaData with Table objects
 
 When we work with a relational database, the basic structure that we create and
 query from is known as a **table**.   In SQLAlchemy, the "table" is represented
-by a Python object similarly named {class}`_schema.Table`.
+by a Python object similarly named {class}`~sqlalchemy.schema.Table`.
 
 To start using the SQLAlchemy Expression Language,
-we will want to have {class}`_schema.Table` objects constructed that represent
+we will want to have {class}`~sqlalchemy.schema.Table` objects constructed that represent
 all of the database tables we are interested in working with.   Each
-{class}`_schema.Table` may be **declared**, meaning we explicitly spell out
+{class}`~sqlalchemy.schema.Table` may be **declared**, meaning we explicitly spell out
 in source code what the table looks like, or may be **reflected**, which means
 we generate the object based on what's already present in a particular database.
 The two approaches can also be blended in many ways.
 
 Whether we will declare or reflect our tables, we start out with a collection
-that will be where we place our tables known as the {class}`_schema.MetaData`
+that will be where we place our tables known as the {class}`~sqlalchemy.schema.MetaData`
 object.  This object is essentially a {term}`facade` around a Python dictionary
-that stores a series of {class}`_schema.Table` objects keyed to their string
+that stores a series of {class}`~sqlalchemy.schema.Table` objects keyed to their string
 name.   Constructing this object looks like:
 
 ```
@@ -52,19 +53,19 @@ name.   Constructing this object looks like:
 >>> metadata = MetaData()
 ```
 
-Having a single {class}`_schema.MetaData` object for an entire application is
+Having a single {class}`~sqlalchemy.schema.MetaData` object for an entire application is
 the most common case, represented as a module-level variable in a single place
 in an application, often in a "models" or "dbschema" type of package.  There
-can be multiple {class}`_schema.MetaData` collections as well,  however
-it's typically most helpful if a series of {class}`_schema.Table` objects that are
-related to each other belong to a single {class}`_schema.MetaData` collection.
+can be multiple {class}`~sqlalchemy.schema.MetaData` collections as well,  however
+it's typically most helpful if a series of {class}`~sqlalchemy.schema.Table` objects that are
+related to each other belong to a single {class}`~sqlalchemy.schema.MetaData` collection.
 
-Once we have a {class}`_schema.MetaData` object, we can declare some
-{class}`_schema.Table` objects.  This tutorial will start with the classic
+Once we have a {class}`~sqlalchemy.schema.MetaData` object, we can declare some
+{class}`~sqlalchemy.schema.Table` objects.  This tutorial will start with the classic
 SQLAlchemy tutorial model, that of the table `user`, which would for
 example represent the users of a website, and the table `address`,
 representing a list of email addresses associated with rows in the `user`
-table.   We normally assign each {class}`_schema.Table` object to a variable
+table.   We normally assign each {class}`~sqlalchemy.schema.Table` object to a variable
 that will be how we will refer to the table in application code:
 
 ```
@@ -78,19 +79,19 @@ that will be how we will refer to the table in application code:
 ... )
 ```
 
-We can observe that the above {class}`_schema.Table` construct looks a lot like
+We can observe that the above {class}`~sqlalchemy.schema.Table` construct looks a lot like
 a SQL CREATE TABLE statement; starting with the table name, then listing out
 each column, where each column has a name and a datatype.   The objects we
 use above are:
 
-- {class}`_schema.Table` - represents a database table and assigns itself
-  to a {class}`_schema.MetaData` collection.
+- {class}`~sqlalchemy.schema.Table` - represents a database table and assigns itself
+  to a {class}`~sqlalchemy.schema.MetaData` collection.
 
-- {class}`_schema.Column` - represents a column in a database table, and
-  assigns itself to a {class}`_schema.Table` object.   The {class}`_schema.Column`
+- {class}`~sqlalchemy.schema.Column` - represents a column in a database table, and
+  assigns itself to a {class}`~sqlalchemy.schema.Table` object.   The {class}`~sqlalchemy.schema.Column`
   usually includes a string name and a type object.   The collection of
-  {class}`_schema.Column` objects in terms of the parent {class}`_schema.Table`
-  are typically accessed via an associative array located at {attr}`_schema.Table.c`:
+  {class}`~sqlalchemy.schema.Column` objects in terms of the parent {class}`~sqlalchemy.schema.Table`
+  are typically accessed via an associative array located at {attr}`~sqlalchemy.schema.Table.c`:
 
   ```
   >>> user_table.c.name
@@ -100,36 +101,36 @@ use above are:
   ['id', 'name', 'fullname']
   ```
 
-- {class}`_types.Integer`, {class}`_types.String` - these classes represent
-  SQL datatypes and can be passed to a {class}`_schema.Column` with or without
+- {class}`~sqlalchemy.types.Integer`, {class}`~sqlalchemy.types.String` - these classes represent
+  SQL datatypes and can be passed to a {class}`~sqlalchemy.schema.Column` with or without
   necessarily being instantiated.  Above, we want to give a length of "30" to
   the "name" column, so we instantiated `String(30)`.  But for "id" and
   "fullname" we did not specify these, so we can send the class itself.
 
 :::{seealso}
-The reference and API documentation for {class}`_schema.MetaData`,
-{class}`_schema.Table` and {class}`_schema.Column` is at {ref}`metadata_toplevel`.
+The reference and API documentation for {class}`~sqlalchemy.schema.MetaData`,
+{class}`~sqlalchemy.schema.Table` and {class}`~sqlalchemy.schema.Column` is at {ref}`metadata_toplevel`.
 The reference documentation for datatypes is at {ref}`types_toplevel`.
 :::
 
 In an upcoming section, we will illustrate one of the fundamental
-functions of {class}`_schema.Table` which
+functions of {class}`~sqlalchemy.schema.Table` which
 is to generate {term}`DDL` on a particular database connection.  But first
-we will declare a second {class}`_schema.Table`.
+we will declare a second {class}`~sqlalchemy.schema.Table`.
 
-```{eval-rst}
+<!--
 .. rst-class:: core-header
-```
+-->
 
 ## Declaring Simple Constraints
 
-The first {class}`_schema.Column` in the above `user_table` includes the
-{paramref}`_schema.Column.primary_key` parameter which is a shorthand technique
-of indicating that this {class}`_schema.Column` should be part of the primary
+The first {class}`~sqlalchemy.schema.Column` in the above `user_table` includes the
+{paramref}`~sqlalchemy.schema.Column.primary_key` parameter which is a shorthand technique
+of indicating that this {class}`~sqlalchemy.schema.Column` should be part of the primary
 key for this table.  The primary key itself is normally declared implicitly
-and is represented by the {class}`_schema.PrimaryKeyConstraint` construct,
-which we can see on the {attr}`_schema.Table.primary_key`
-attribute on the {class}`_schema.Table` object:
+and is represented by the {class}`~sqlalchemy.schema.PrimaryKeyConstraint` construct,
+which we can see on the {attr}`~sqlalchemy.schema.Table.primary_key`
+attribute on the {class}`~sqlalchemy.schema.Table` object:
 
 ```
 >>> user_table.primary_key
@@ -137,15 +138,15 @@ PrimaryKeyConstraint(Column('id', Integer(), table=<user_account>, primary_key=T
 ```
 
 The constraint that is most typically declared explicitly is the
-{class}`_schema.ForeignKeyConstraint` object that corresponds to a database
+{class}`~sqlalchemy.schema.ForeignKeyConstraint` object that corresponds to a database
 {term}`foreign key constraint`.  When we declare tables that are related to
 each other, SQLAlchemy uses the presence of these foreign key constraint
 declarations not only so that they are emitted within CREATE statements to
 the database, but also to assist in constructing SQL expressions.
 
-A {class}`_schema.ForeignKeyConstraint` that involves only a single column
+A {class}`~sqlalchemy.schema.ForeignKeyConstraint` that involves only a single column
 on the target table is typically declared using a column-level shorthand notation
-via the {class}`_schema.ForeignKey` object.  Below we declare a second table
+via the {class}`~sqlalchemy.schema.ForeignKey` object.  Below we declare a second table
 `address` that will have a foreign key constraint referring to the `user`
 table:
 
@@ -161,33 +162,32 @@ table:
 ```
 
 The table above also features a third kind of constraint, which in SQL is the
-"NOT NULL" constraint, indicated above using the {paramref}`_schema.Column.nullable`
+"NOT NULL" constraint, indicated above using the {paramref}`~sqlalchemy.schema.Column.nullable`
 parameter.
 
 :::{tip}
-When using the {class}`_schema.ForeignKey` object within a
-{class}`_schema.Column` definition, we can omit the datatype for that
-{class}`_schema.Column`; it is automatically inferred from that of the
-related column, in the above example the {class}`_types.Integer` datatype
+When using the {class}`~sqlalchemy.schema.ForeignKey` object within a
+{class}`~sqlalchemy.schema.Column` definition, we can omit the datatype for that
+{class}`~sqlalchemy.schema.Column`; it is automatically inferred from that of the
+related column, in the above example the {class}`~sqlalchemy.types.Integer` datatype
 of the `user_account.id` column.
 :::
 
 In the next section we will emit the completed DDL for the `user` and
 `address` table to see the completed result.
 
-```{eval-rst}
+<!--
 .. rst-class:: core-header, orm-dependency
+-->
 
-```
-
-(tutorial-emitting-ddl)=
+(sqlatutorial:emitting-ddl)=
 
 ## Emitting DDL to the Database
 
 We've constructed a fairly elaborate object hierarchy to represent
-two database tables, starting at the root {class}`_schema.MetaData`
-object, then into two {class}`_schema.Table` objects, each of which hold
-onto a collection of {class}`_schema.Column` and {class}`_schema.Constraint`
+two database tables, starting at the root {class}`~sqlalchemy.schema.MetaData`
+object, then into two {class}`~sqlalchemy.schema.Table` objects, each of which hold
+onto a collection of {class}`~sqlalchemy.schema.Column` and {class}`~sqlalchemy.schema.Constraint`
 objects.   This object structure will be at the center of most operations
 we perform with both Core and ORM going forward.
 
@@ -195,10 +195,10 @@ The first useful thing we can do with this structure will be to emit CREATE
 TABLE statements, or {term}`DDL`, to our SQLite database so that we can insert
 and query data from them.   We have already all the tools needed to do so, by
 invoking the
-{meth}`_schema.MetaData.create_all` method on our {class}`_schema.MetaData`,
-sending it the {class}`_future.Engine` that refers to the target database:
+{meth}`~sqlalchemy.schema.MetaData.create_all` method on our {class}`~sqlalchemy.schema.MetaData`,
+sending it the {class}`~sqlalchemy.future.Engine` that refers to the target database:
 
-```pycon+sql
+```python
 >>> metadata.create_all(engine)
 {opensql}BEGIN (implicit)
 PRAGMA main.table_...info("user_account")
@@ -235,12 +235,12 @@ existing, so the `address` table is created second.   In more complicated
 dependency scenarios the FOREIGN KEY constraints may also be applied to tables
 after the fact using ALTER.
 
-The {class}`_schema.MetaData` object also features a
-{meth}`_schema.MetaData.drop_all` method that will emit DROP statements in the
+The {class}`~sqlalchemy.schema.MetaData` object also features a
+{meth}`~sqlalchemy.schema.MetaData.drop_all` method that will emit DROP statements in the
 reverse order as it would emit CREATE in order to drop schema elements.
 
-:::{topic} Migration tools are usually appropriate
-Overall, the CREATE / DROP feature of {class}`_schema.MetaData` is useful
+:::{admonition} Migration tools are usually appropriate
+Overall, the CREATE / DROP feature of {class}`~sqlalchemy.schema.MetaData` is useful
 for test suites, small and/or new applications, and applications that use
 short-lived databases.  For management of an application database schema
 over the long term however, a schema management tool such as [Alembic](https://alembic.sqlalchemy.org), which builds upon SQLAlchemy, is likely
@@ -249,32 +249,32 @@ incrementally altering a fixed database schema over time as the design of
 the application changes.
 :::
 
-```{eval-rst}
-.. rst-class:: orm-header
-```
+<!--
+.. rst-class:: core-header, orm-dependency
+-->
 
-(tutorial-orm-table-metadata)=
+(sqlatutorial:orm-table-metadata)=
 
 ## Defining Table Metadata with the ORM
 
 This ORM-only section will provide an example declaring the
 same database structure illustrated in the previous section, using a more
 ORM-centric configuration paradigm.   When using
-the ORM, the process by which we declare {class}`_schema.Table` metadata
+the ORM, the process by which we declare {class}`~sqlalchemy.schema.Table` metadata
 is usually combined with the process of declaring {term}`mapped` classes.
 The mapped class is any Python class we'd like to create, which will then
 have attributes on it that will be linked to the columns in a database table.
 While there are a few varieties of how this is achieved, the most common
 style is known as
 {ref}`declarative <orm_declarative_mapper_config_toplevel>`, and allows us
-to declare our user-defined classes and {class}`_schema.Table` metadata
+to declare our user-defined classes and {class}`~sqlalchemy.schema.Table` metadata
 at once.
 
 ### Setting up the Registry
 
-When using the ORM, the {class}`_schema.MetaData` collection remains present,
+When using the ORM, the {class}`~sqlalchemy.schema.MetaData` collection remains present,
 however it itself is contained within an ORM-only object known as the
-{class}`_orm.registry`.   We create a {class}`_orm.registry` by constructing
+{class}`~sqlalchemy.orm.registry`.   We create a {class}`~sqlalchemy.orm.registry` by constructing
 it:
 
 ```
@@ -282,29 +282,29 @@ it:
 >>> mapper_registry = registry()
 ```
 
-The above {class}`_orm.registry`, when constructed, automatically includes
-a {class}`_schema.MetaData` object that will store a collection of
-{class}`_schema.Table` objects:
+The above {class}`~sqlalchemy.orm.registry`, when constructed, automatically includes
+a {class}`~sqlalchemy.schema.MetaData` object that will store a collection of
+{class}`~sqlalchemy.schema.Table` objects:
 
 ```
 >>> mapper_registry.metadata
 MetaData()
 ```
 
-Instead of declaring {class}`_schema.Table` objects directly, we will now
+Instead of declaring {class}`~sqlalchemy.schema.Table` objects directly, we will now
 declare them indirectly through directives applied to our mapped classes. In
 the most common approach, each mapped class descends from a common base class
 known as the **declarative base**.   We get a new declarative base from the
-{class}`_orm.registry` using the {meth}`_orm.registry.generate_base` method:
+{class}`~sqlalchemy.orm.registry` using the {meth}`~sqlalchemy.orm.registry.generate_base` method:
 
 ```
 >>> Base = mapper_registry.generate_base()
 ```
 
 :::{tip}
-The steps of creating the {class}`_orm.registry` and "declarative base"
+The steps of creating the {class}`~sqlalchemy.orm.registry` and "declarative base"
 classes can be combined into one step using the historically familiar
-{func}`_orm.declarative_base` function:
+{func}`~sqlalchemy.orm.declarative_base` function:
 
 ```
 from sqlalchemy.orm import declarative_base
@@ -314,7 +314,7 @@ Base = declarative_base()
 %
 :::
 
-(tutorial-declaring-mapped-classes)=
+(sqlatutorial:declaring-mapped-classes)=
 
 ### Declaring Mapped Classes
 
@@ -352,10 +352,10 @@ for the `user` and `address` table in terms of new classes `User` and
 
 The above two classes are now our mapped classes, and are available for use in
 ORM persistence and query operations, which will be described later. But they
-also include {class}`_schema.Table` objects that were generated as part of the
+also include {class}`~sqlalchemy.schema.Table` objects that were generated as part of the
 declarative mapping process, and are equivalent to the ones that we declared
 directly in the previous Core section.   We can see these
-{class}`_schema.Table` objects from a declarative mapped class using the
+{class}`~sqlalchemy.schema.Table` objects from a declarative mapped class using the
 `.__table__` attribute:
 
 ```
@@ -366,10 +366,10 @@ Table('user_account', MetaData(),
     Column('fullname', String(), table=<user_account>), schema=None)
 ```
 
-This {class}`_schema.Table` object was generated from the declarative process
+This {class}`~sqlalchemy.schema.Table` object was generated from the declarative process
 based on the `.__tablename__` attribute defined on each of our classes,
-as well as through the use of {class}`_schema.Column` objects assigned
-to class-level attributes within the classes.   These {class}`_schema.Column`
+as well as through the use of {class}`~sqlalchemy.schema.Column` objects assigned
+to class-level attributes within the classes.   These {class}`~sqlalchemy.schema.Column`
 objects can usually be declared without an explicit "name" field inside
 the constructor, as the Declarative process will name them automatically
 based on the attribute name that was used.
@@ -388,7 +388,7 @@ attributes:
   of the objects.  We are free to provide our own `__init__()` method as well.
   The `__init__()` allows us to create instances of `User` and `Address`
   passing attribute names, most of which above are linked directly to
-  {class}`_schema.Column` objects, as parameter names:
+  {class}`~sqlalchemy.schema.Column` objects, as parameter names:
 
   ```
   >>> sandy = User(name="sandy", fullname="Sandy Cheeks")
@@ -415,27 +415,27 @@ attributes:
 
 - **we also included a bidirectional relationship** - this  is another **fully optional**
   construct, where we made use of an ORM construct called
-  {func}`_orm.relationship` on both classes, which indicates to the ORM that
+  {func}`~sqlalchemy.orm.relationship` on both classes, which indicates to the ORM that
   these `User` and `Address` classes refer to each other in a {term}`one to
   many` / {term}`many to one` relationship.  The use of
-  {func}`_orm.relationship` above is so that we may demonstrate its behavior
+  {func}`~sqlalchemy.orm.relationship` above is so that we may demonstrate its behavior
   later in this tutorial; it is  **not required** in order to define the
-  {class}`_schema.Table` structure.
+  {class}`~sqlalchemy.schema.Table` structure.
 
 ### Emitting DDL to the database
 
-This section is named the same as the section {ref}`tutorial_emitting_ddl`
+This section is named the same as the section {ref}`sqlatutorial:emitting-ddl`
 discussed in terms of Core.   This is because emitting DDL with our
 ORM mapped classes is not any different.  If we wanted to emit DDL
-for the {class}`_schema.Table` objects we've created as part of
+for the {class}`~sqlalchemy.schema.Table` objects we've created as part of
 our declaratively mapped classes, we still can use
-{meth}`_schema.MetaData.create_all` as before.
+{meth}`~sqlalchemy.schema.MetaData.create_all` as before.
 
 In our case, we have already generated the `user` and `address` tables
 in our SQLite database.   If we had not done so already, we would be free to
-make use of the {class}`_schema.MetaData` associated with our
-{class}`_orm.registry` and ORM declarative base class in order to do so,
-using {meth}`_schema.MetaData.create_all`:
+make use of the {class}`~sqlalchemy.schema.MetaData` associated with our
+{class}`~sqlalchemy.orm.registry` and ORM declarative base class in order to do so,
+using {meth}`~sqlalchemy.schema.MetaData.create_all`:
 
 ```
 # emit CREATE statements given ORM registry
@@ -449,10 +449,10 @@ Base.metadata.create_all(engine)
 ### Combining Core Table Declarations with ORM Declarative
 
 As an alternative approach to the mapping process shown previously
-at {ref}`tutorial_declaring_mapped_classes`, we may also make
-use of the {class}`_schema.Table` objects we created directly in the section
-{ref}`tutorial_core_metadata` in conjunction with
-declarative mapped classes from a {func}`_orm.declarative_base` generated base
+at {ref}`sqlatutorial:declaring-mapped-classes`, we may also make
+use of the {class}`~sqlalchemy.schema.Table` objects we created directly in the section
+{ref}`sqlatutorial:core-metadata` in conjunction with
+declarative mapped classes from a {func}`~sqlalchemy.orm.declarative_base` generated base
 class.
 
 This form is called  {ref}`hybrid table <orm_imperative_table_configuration>`,
@@ -481,41 +481,41 @@ The above two classes are equivalent to those which we declared in the
 previous mapping example.
 
 The traditional "declarative base" approach using `__tablename__` to
-automatically generate {class}`_schema.Table` objects remains the most popular
+automatically generate {class}`~sqlalchemy.schema.Table` objects remains the most popular
 method to declare table metadata.  However, disregarding the ORM mapping
 functionality it achieves, as far as table declaration it's merely a syntactical
-convenience on top of the {class}`_schema.Table` constructor.
+convenience on top of the {class}`~sqlalchemy.schema.Table` constructor.
 
 We will next refer to our ORM mapped classes above when we talk about data
-manipulation in terms of the ORM, in the section {ref}`tutorial_inserting_orm`.
+manipulation in terms of the ORM, in the section {ref}`sqlatutorial:inserting-orm`.
 
-```{eval-rst}
+<!--
 .. rst-class:: core-header
-```
+-->
 
-(tutorial-table-reflection)=
+(sqlatutorial:table-reflection)=
 
 ## Table Reflection
 
 To round out the section on working with table metadata, we will illustrate
 another operation that was mentioned at the beginning of the section,
 that of **table reflection**.   Table reflection refers to the process of
-generating {class}`_schema.Table` and related objects by reading the current
+generating {class}`~sqlalchemy.schema.Table` and related objects by reading the current
 state of a database.   Whereas in the previous sections we've been declaring
-{class}`_schema.Table` objects in Python and then emitting DDL to the database,
+{class}`~sqlalchemy.schema.Table` objects in Python and then emitting DDL to the database,
 the reflection process does it in reverse.
 
-As an example of reflection, we will create a new {class}`_schema.Table`
+As an example of reflection, we will create a new {class}`~sqlalchemy.schema.Table`
 object which represents the `some_table` object we created manually in
 the earlier sections of this document.  There are again some varieties of
 how this is performed, however the most basic is to construct a
-{class}`_schema.Table` object, given the name of the table and a
-{class}`_schema.MetaData` collection to which it will belong, then
-instead of indicating individual {class}`_schema.Column` and
-{class}`_schema.Constraint` objects, pass it the target {class}`_future.Engine`
-using the {paramref}`_schema.Table.autoload_with` parameter:
+{class}`~sqlalchemy.schema.Table` object, given the name of the table and a
+{class}`~sqlalchemy.schema.MetaData` collection to which it will belong, then
+instead of indicating individual {class}`~sqlalchemy.schema.Column` and
+{class}`~sqlalchemy.schema.Constraint` objects, pass it the target {class}`~sqlalchemy.future.Engine`
+using the {paramref}`~sqlalchemy.schema.Table.autoload_with` parameter:
 
-```pycon+sql
+```python
 >>> some_table = Table("some_table", metadata, autoload_with=engine)
 {opensql}BEGIN (implicit)
 PRAGMA main.table_...info("some_table")
@@ -530,8 +530,8 @@ ROLLBACK{stop}
 ```
 
 At the end of the process, the `some_table` object now contains the
-information about the {class}`_schema.Column` objects present in the table, and
-the object is usable in exactly the same way as a {class}`_schema.Table` that
+information about the {class}`~sqlalchemy.schema.Column` objects present in the table, and
+the object is usable in exactly the same way as a {class}`~sqlalchemy.schema.Table` that
 we declared explicitly:
 
 ```

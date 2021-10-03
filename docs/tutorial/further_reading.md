@@ -1,4 +1,4 @@
-(tutorial-further-reading)=
+(sqlatutorial:further-reading)=
 
 # Further Reading
 
@@ -18,4 +18,4 @@ ORM Essential Reference
 - {ref}`mapper_config_toplevel`
 - {ref}`relationship_config_toplevel`
 - {ref}`session_toplevel`
-- {doc}`/orm/loading_objects`
+- {doc}`orm/loading_objects`

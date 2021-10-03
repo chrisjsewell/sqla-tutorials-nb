@@ -1,16 +1,16 @@
-(tutorial-orm-related-objects)=
+(sqlatutorial:orm-related-objects)=
 
 # Working with Related Objects
 
 In this section, we will cover one more essential ORM concept, which is
 how the ORM interacts with mapped classes that refer to other objects. In the
-section {ref}`tutorial_declaring_mapped_classes`, the mapped class examples
-made use of a construct called {func}`_orm.relationship`.  This construct
+section {ref}`sqlatutorial:declaring-mapped-classes`, the mapped class examples
+made use of a construct called {func}`~sqlalchemy.orm.relationship`.  This construct
 defines a linkage between two different mapped classes, or from a mapped class
 to itself, the latter of which is called a **self-referential** relationship.
 
-To describe the basic idea of {func}`_orm.relationship`, first we'll review
-the mapping in short form, omitting the {class}`_schema.Column` mappings
+To describe the basic idea of {func}`~sqlalchemy.orm.relationship`, first we'll review
+the mapping in short form, omitting the {class}`~sqlalchemy.schema.Column` mappings
 and other directives:
 
 ```python
@@ -33,27 +33,27 @@ class Address(Base):
 
 Above, the `User` class now has an attribute `User.addresses` and the
 `Address` class has an attribute `Address.user`.   The
-{func}`_orm.relationship` construct will be used to inspect the table
-relationships between the {class}`_schema.Table` objects that are mapped to the
-`User` and `Address` classes. As the {class}`_schema.Table` object
+{func}`~sqlalchemy.orm.relationship` construct will be used to inspect the table
+relationships between the {class}`~sqlalchemy.schema.Table` objects that are mapped to the
+`User` and `Address` classes. As the {class}`~sqlalchemy.schema.Table` object
 representing the
-`address` table has a {class}`_schema.ForeignKeyConstraint` which refers to
-the `user_account` table, the {func}`_orm.relationship` can determine
+`address` table has a {class}`~sqlalchemy.schema.ForeignKeyConstraint` which refers to
+the `user_account` table, the {func}`~sqlalchemy.orm.relationship` can determine
 unambiguously that there is a {term}`one to many` relationship from
 `User.addresses` to `User`; one particular row in the `user_account`
 table may be referred towards by many rows in the `address` table.
 
 All one-to-many relationships naturally correspond to a {term}`many to one`
 relationship in the other direction, in this case the one noted by
-`Address.user`. The {paramref}`_orm.relationship.back_populates` parameter,
-seen above configured on both {func}`_orm.relationship` objects referring to
-the other name, establishes that each of these two {func}`_orm.relationship`
+`Address.user`. The {paramref}`~sqlalchemy.orm.relationship.back_populates` parameter,
+seen above configured on both {func}`~sqlalchemy.orm.relationship` objects referring to
+the other name, establishes that each of these two {func}`~sqlalchemy.orm.relationship`
 constructs should be considered to be complimentary to each other; we will see
 how this plays out in the next section.
 
 ## Persisting and Loading Relationships
 
-We can start by illustrating what {func}`_orm.relationship` does to instances
+We can start by illustrating what {func}`~sqlalchemy.orm.relationship` does to instances
 of objects.   If we make a new `User` object, we can note that there is a
 Python list when we access the `.addresses` element:
 
@@ -66,7 +66,7 @@ Python list when we access the `.addresses` element:
 This object is a SQLAlchemy-specific version of Python `list` which
 has the ability to track and respond to changes made to it.  The collection
 also appeared automatically when we accessed the attribute, even though we never assigned it to the object.
-This is similar to the behavior noted at {ref}`tutorial_inserting_orm` where
+This is similar to the behavior noted at {ref}`sqlatutorial:inserting-orm` where
 it was observed that column-based attributes to which we don't explicitly
 assign a value also display as `None` automatically, rather than raising
 an `AttributeError` as would be Python's usual behavior.
@@ -106,9 +106,9 @@ User(id=None, name='pkrabs', fullname='Pearl Krabs')
 ```
 
 This synchronization occurred as a result of our use of the
-{paramref}`_orm.relationship.back_populates` parameter between the two
-{func}`_orm.relationship` objects.  This parameter names another
-{func}`_orm.relationship` for which complementary attribute assignment / list
+{paramref}`~sqlalchemy.orm.relationship.back_populates` parameter between the two
+{func}`~sqlalchemy.orm.relationship` objects.  This parameter names another
+{func}`~sqlalchemy.orm.relationship` for which complementary attribute assignment / list
 mutation should occur.   It will work equally well in the other
 direction, which is that if we create another `Address` object and assign
 to its `Address.user` attribute, that `Address` becomes part of the
@@ -134,13 +134,13 @@ of the `Address.user` attribute after the fact:
 
 We now have a `User` and two `Address` objects that are associated in a
 bidirectional structure
-in memory, but as noted previously in {ref}`tutorial_inserting_orm` ,
+in memory, but as noted previously in {ref}`sqlatutorial:inserting-orm` ,
 these objects are said to be in the {term}`transient` state until they
-are associated with a {class}`_orm.Session` object.
+are associated with a {class}`~sqlalchemy.orm.Session` object.
 
-We make use of the {class}`_orm.Session` that's still ongoing, and note that
-when we apply the {meth}`_orm.Session.add` method to the lead `User` object,
-the related `Address` object also gets added to that same {class}`_orm.Session`:
+We make use of the {class}`~sqlalchemy.orm.Session` that's still ongoing, and note that
+when we apply the {meth}`~sqlalchemy.orm.Session.add` method to the lead `User` object,
+the related `Address` object also gets added to that same {class}`~sqlalchemy.orm.Session`:
 
 ```
 >>> session.add(u1)
@@ -152,7 +152,7 @@ True
 True
 ```
 
-The above behavior, where the {class}`_orm.Session` received a `User` object,
+The above behavior, where the {class}`~sqlalchemy.orm.Session` received a `User` object,
 and followed along the `User.addresses` relationship to locate a related
 `Address` object, is known as the **save-update cascade** and is discussed
 in detail in the ORM reference documentation at {ref}`unitofwork_cascades`.
@@ -161,7 +161,7 @@ The three objects are now in the {term}`pending` state; this means they are
 ready to be the subject of an INSERT operation but this has not yet proceeded;
 all three objects have no primary key assigned yet, and in addition, the `a1`
 and `a2` objects have an attribute called `user_id` which refers to the
-{class}`_schema.Column` that has a {class}`_schema.ForeignKeyConstraint`
+{class}`~sqlalchemy.schema.Column` that has a {class}`~sqlalchemy.schema.ForeignKeyConstraint`
 referring to the `user_account.id` column; these are also `None` as the
 objects are not yet associated with a real database row:
 
@@ -173,7 +173,7 @@ None
 ```
 
 It's at this stage that we can see the very great utility that the unit of
-work process provides; recall in the section {ref}`tutorial_core_insert_values_clause`,
+work process provides; recall in the section {ref}`sqlatutorial:core-insert-values-clause`,
 rows were inserted into the `user_account` and
 `address` tables using some elaborate syntaxes in order to automatically
 associate the `address.user_id` columns with those of the `user_account`
@@ -182,14 +182,14 @@ rows first, before those of `address`, since rows in `address` are
 **dependent** on their parent row in `user_account` for a value in their
 `user_id` column.
 
-When using the {class}`_orm.Session`, all this tedium is handled for us and
+When using the {class}`~sqlalchemy.orm.Session`, all this tedium is handled for us and
 even the most die-hard SQL purist can benefit from automation of INSERT,
-UPDATE and DELETE statements.   When we {meth}`_orm.Session.commit` the
+UPDATE and DELETE statements.   When we {meth}`~sqlalchemy.orm.Session.commit` the
 transaction all steps invoke in the correct order, and furthermore the
 newly generated primary key of the `user_account` row is applied to the
 `address.user_id` column appropriately:
 
-```pycon+sql
+```python
 >>> session.commit()
 {opensql}INSERT INTO user_account (name, fullname) VALUES (?, ?)
 [...] ('pkrabs', 'Pearl Krabs')
@@ -200,20 +200,20 @@ INSERT INTO address (email_address, user_id) VALUES (?, ?)
 COMMIT
 ```
 
-(tutorial-loading-relationships)=
+(sqlatutorial:loading-relationships)=
 
 ## Loading Relationships
 
-In the last step, we called {meth}`_orm.Session.commit` which emitted a COMMIT
+In the last step, we called {meth}`~sqlalchemy.orm.Session.commit` which emitted a COMMIT
 for the transaction, and then per
-{paramref}`_orm.Session.commit.expire_on_commit` expired all objects so that
+{paramref}`~sqlalchemy.orm.Session.commit.expire_on_commit` expired all objects so that
 they refresh for the next transaction.
 
 When we next access an attribute on these objects, we'll see the SELECT
 emitted for the primary attributes of the row, such as when we view the
 newly generated primary key for the `u1` object:
 
-```pycon+sql
+```python
 >>> u1.id
 {opensql}BEGIN (implicit)
 SELECT user_account.id AS user_account_id, user_account.name AS user_account_name,
@@ -229,7 +229,7 @@ that we may also access.   As this collection consists of an additional set
 of rows from the `address` table, when we access this collection as well
 we again see a {term}`lazy load` emitted in order to retrieve the objects:
 
-```pycon+sql
+```python
 >>> u1.addresses
 {opensql}SELECT address.id AS address_id, address.email_address AS address_email_address,
 address.user_id AS address_user_id
@@ -268,38 +268,38 @@ Address(id=5, email_address='pearl@aol.com')
 
 The issue of how relationships load, or not, is an entire subject onto
 itself.  Some additional introduction to these concepts is later in this
-section at {ref}`tutorial_orm_loader_strategies`.
+section at {ref}`sqlatutorial:orm-loader-strategies`.
 
-(tutorial-select-relationships)=
+(sqlatutorial:select-relationships)=
 
 ## Using Relationships in Queries
 
-The previous section introduced the behavior of the {func}`_orm.relationship`
+The previous section introduced the behavior of the {func}`~sqlalchemy.orm.relationship`
 construct when working with **instances of a mapped class**, above, the
 `u1`, `a1` and `a2` instances of the `User` and `Address` classes.
-In this section, we introduce the behavior of {func}`_orm.relationship` as it
+In this section, we introduce the behavior of {func}`~sqlalchemy.orm.relationship` as it
 applies to **class level behavior of a mapped class**, where it serves in
 several ways to help automate the construction of SQL queries.
 
-(tutorial-joining-relationships)=
+(sqlatutorial:joining-relationships)=
 
 ### Using Relationships to Join
 
-The sections {ref}`tutorial_select_join` and
-{ref}`tutorial_select_join_onclause` introduced the usage of the
-{meth}`_sql.Select.join` and {meth}`_sql.Select.join_from` methods to compose
+The sections {ref}`sqlatutorial:select-join` and
+{ref}`sqlatutorial:select-join-onclause` introduced the usage of the
+{meth}`~sqlalchemy.sql.expression.Select.join` and {meth}`~sqlalchemy.sql.expression.Select.join_from` methods to compose
 SQL JOIN clauses.   In order to describe how to join between tables, these
 methods either **infer** the ON clause based on the presence of a single
-unambiguous {class}`_schema.ForeignKeyConstraint` object within the table
+unambiguous {class}`~sqlalchemy.schema.ForeignKeyConstraint` object within the table
 metadata structure that links the two tables, or otherwise we may provide an
 explicit SQL Expression construct that indicates a specific ON clause.
 
 When using ORM entities, an additional mechanism is available to help us set up
-the ON clause of a join, which is to make use of the {func}`_orm.relationship`
+the ON clause of a join, which is to make use of the {func}`~sqlalchemy.orm.relationship`
 objects that we set up in our user mapping, as was demonstrated at
-{ref}`tutorial_declaring_mapped_classes`. The class-bound attribute
-corresponding to the {func}`_orm.relationship` may be passed as the **single
-argument** to {meth}`_sql.Select.join`, where it serves to indicate both the
+{ref}`sqlatutorial:declaring-mapped-classes`. The class-bound attribute
+corresponding to the {func}`~sqlalchemy.orm.relationship` may be passed as the **single
+argument** to {meth}`~sqlalchemy.sql.expression.Select.join`, where it serves to indicate both the
 right side of the join as well as the ON clause at once:
 
 ```
@@ -312,13 +312,13 @@ right side of the join as well as the ON clause at once:
 FROM user_account JOIN address ON user_account.id = address.user_id
 ```
 
-The presence of an ORM {func}`_orm.relationship` on a mapping is not used
-by {meth}`_sql.Select.join` or {meth}`_sql.Select.join_from` if we don't
+The presence of an ORM {func}`~sqlalchemy.orm.relationship` on a mapping is not used
+by {meth}`~sqlalchemy.sql.expression.Select.join` or {meth}`~sqlalchemy.sql.expression.Select.join_from` if we don't
 specify it; it is **not used for ON clause
 inference**.  This means, if we join from `User` to `Address` without an
-ON clause, it works because of the {class}`_schema.ForeignKeyConstraint`
-between the two mapped {class}`_schema.Table` objects, not because of the
-{func}`_orm.relationship` objects on the `User` and `Address` classes:
+ON clause, it works because of the {class}`~sqlalchemy.schema.ForeignKeyConstraint`
+between the two mapped {class}`~sqlalchemy.schema.Table` objects, not because of the
+{func}`~sqlalchemy.orm.relationship` objects on the `User` and `Address` classes:
 
 ```
 >>> print(
@@ -329,17 +329,17 @@ between the two mapped {class}`_schema.Table` objects, not because of the
 FROM user_account JOIN address ON user_account.id = address.user_id
 ```
 
-(tutorial-joining-relationships-aliased)=
+(sqlatutorial:joining-relationships-aliased)=
 
 ### Joining between Aliased targets
 
-In the section {ref}`tutorial_orm_entity_aliases` we introduced the
-{func}`_orm.aliased` construct, which is used to apply a SQL alias to an
-ORM entity.   When using a {func}`_orm.relationship` to help construct SQL JOIN, the
-use case where the target of the join is to be an {func}`_orm.aliased` is suited
-by making use of the {meth}`_orm.PropComparator.of_type` modifier.    To
-demonstrate we will construct the same join illustrated at {ref}`tutorial_orm_entity_aliases`
-using the {func}`_orm.relationship` attributes to join instead:
+In the section {ref}`sqlatutorial:orm-entity-aliases` we introduced the
+{func}`~sqlalchemy.orm.aliased` construct, which is used to apply a SQL alias to an
+ORM entity.   When using a {func}`~sqlalchemy.orm.relationship` to help construct SQL JOIN, the
+use case where the target of the join is to be an {func}`~sqlalchemy.orm.aliased` is suited
+by making use of the {meth}`~sqlalchemy.orm.PropComparator.of_type` modifier.    To
+demonstrate we will construct the same join illustrated at {ref}`sqlatutorial:orm-entity-aliases`
+using the {func}`~sqlalchemy.orm.relationship` attributes to join instead:
 
 ```
 >>> print(
@@ -357,8 +357,8 @@ WHERE address_1.email_address = :email_address_1
 AND address_2.email_address = :email_address_2
 ```
 
-To make use of a {func}`_orm.relationship` to construct a join **from** an
-aliased entity, the attribute is available from the {func}`_orm.aliased`
+To make use of a {func}`~sqlalchemy.orm.relationship` to construct a join **from** an
+aliased entity, the attribute is available from the {func}`~sqlalchemy.orm.aliased`
 construct directly:
 
 ```
@@ -372,21 +372,21 @@ FROM user_account AS user_account_1
 JOIN address ON user_account_1.id = address.user_id
 ```
 
-(tutorial-joining-relationships-augmented)=
+(sqlatutorial:joining-relationships-augmented)=
 
 ### Augmenting the ON Criteria
 
-The ON clause generated by the {func}`_orm.relationship` construct may
+The ON clause generated by the {func}`~sqlalchemy.orm.relationship` construct may
 also be augmented with additional criteria.  This is useful both for
 quick ways to limit the scope of a particular join over a relationship path,
 and also for use cases like configuring loader strategies, introduced below
-at {ref}`tutorial_orm_loader_strategies`.  The {meth}`_orm.PropComparator.and_`
+at {ref}`sqlatutorial:orm-loader-strategies`.  The {meth}`~sqlalchemy.orm.PropComparator.and_`
 method accepts a series of SQL expressions positionally that will be joined
 to the ON clause of the JOIN via AND.  For example if we wanted to
 JOIN from `User` to `Address` but also limit the ON criteria to only certain
 email addresses:
 
-```pycon+sql
+```python
 >>> stmt = (
 ...   select(User.fullname).
 ...   join(User.addresses.and_(Address.email_address == 'pearl.krabs@gmail.com'))
@@ -399,22 +399,22 @@ JOIN address ON user_account.id = address.user_id AND address.email_address = ?
 [('Pearl Krabs',)]
 ```
 
-(tutorial-relationship-exists)=
+(sqlatutorial:relationship-exists)=
 
 ### EXISTS forms: has() / any()
 
-In the section {ref}`tutorial_exists`, we introduced the {class}`_sql.Exists`
+In the section {ref}`sqlatutorial:exists`, we introduced the {class}`~sqlalchemy.sql.expression.Exists`
 object that provides for the SQL EXISTS keyword in conjunction with a
-scalar subquery.   The {func}`_orm.relationship` construct provides for some
+scalar subquery.   The {func}`~sqlalchemy.orm.relationship` construct provides for some
 helper methods that may be used to generate some common EXISTS styles
 of queries in terms of the relationship.
 
 For a one-to-many relationship such as `User.addresses`, an EXISTS against
 the `address` table that correlates back to the `user_account` table
-can be produced using {meth}`_orm.PropComparator.any`.  This method accepts
+can be produced using {meth}`~sqlalchemy.orm.PropComparator.any`.  This method accepts
 an optional WHERE criteria to limit the rows matched by the subquery:
 
-```pycon+sql
+```python
 >>> stmt = (
 ...   select(User.fullname).
 ...   where(User.addresses.any(Address.email_address == 'pearl.krabs@gmail.com'))
@@ -434,7 +434,7 @@ is to locate entities where there are no related entities present.  This
 is succinct using a phrase such as `~User.addresses.any()`, to select
 for `User` entities that have no related `Address` rows:
 
-```pycon+sql
+```python
 >>> stmt = (
 ...   select(User.fullname).
 ...   where(~User.addresses.any())
@@ -449,12 +449,12 @@ WHERE user_account.id = address.user_id))
 [('Patrick McStar',), ('Squidward Tentacles',), ('Eugene H. Krabs',)]
 ```
 
-The {meth}`_orm.PropComparator.has` method works in mostly the same way as
-{meth}`_orm.PropComparator.any`, except that it's used for many-to-one
+The {meth}`~sqlalchemy.orm.PropComparator.has` method works in mostly the same way as
+{meth}`~sqlalchemy.orm.PropComparator.any`, except that it's used for many-to-one
 relationships, such as if we wanted to locate all `Address` objects
 which belonged to "pearl":
 
-```pycon+sql
+```python
 >>> stmt = (
 ...   select(Address.email_address).
 ...   where(Address.user.has(User.name=="pkrabs"))
@@ -469,12 +469,12 @@ WHERE user_account.id = address.user_id AND user_account.name = ?)
 [('pearl.krabs@gmail.com',), ('pearl@aol.com',)]
 ```
 
-(tutorial-relationship-operators)=
+(sqlatutorial:relationship-operators)=
 
 ### Common Relationship Operators
 
 There are some additional varieties of SQL generation helpers that come with
-{func}`_orm.relationship`, including:
+{func}`~sqlalchemy.orm.relationship`, including:
 
 - **many to one equals comparison** - a specific object instance can be
   compared to many-to-one relationship, to select rows where the
@@ -516,7 +516,7 @@ There are some additional varieties of SQL generation helpers that come with
   %
 
 - **An object has a particular parent from a one-to-many perspective** - the
-  {func}`_orm.with_parent` function produces a comparison that returns rows
+  {func}`~sqlalchemy.orm.with_parent` function produces a comparison that returns rows
   which are referred towards by a given parent, this is essentially the
   same as using the `==` operator with the many-to-one side:
 
@@ -530,13 +530,13 @@ There are some additional varieties of SQL generation helpers that come with
 
   %
 
-(tutorial-orm-loader-strategies)=
+(sqlatutorial:orm-loader-strategies)=
 
 ## Loader Strategies
 
-In the section {ref}`tutorial_loading_relationships` we introduced the concept
+In the section {ref}`sqlatutorial:loading-relationships` we introduced the concept
 that when we work with instances of mapped objects, accessing the attributes
-that are mapped using {func}`_orm.relationship` in the default case will emit
+that are mapped using {func}`~sqlalchemy.orm.relationship` in the default case will emit
 a {term}`lazy load` when the collection is not populated in order to load
 the objects that should be present in this collection.
 
@@ -560,11 +560,11 @@ the application, turn on SQL echoing, and watch the SQL that is emitted**. If
 there seem to be lots of redundant SELECT statements that look very much like
 they could be rolled into one much more efficiently, if there are loads
 occurring inappropriately for objects that have been {term}`detached` from
-their {class}`_orm.Session`, that's when to look into using **loader
+their {class}`~sqlalchemy.orm.Session`, that's when to look into using **loader
 strategies**.
 
 Loader strategies are represented as objects that may be associated with a
-SELECT statement using the {meth}`_sql.Select.options` method, e.g.:
+SELECT statement using the {meth}`~sqlalchemy.sql.expression.Select.options` method, e.g.:
 
 ```python
 for user_obj in session.execute(
@@ -573,8 +573,8 @@ for user_obj in session.execute(
     user_obj.addresses  # access addresses collection already loaded
 ```
 
-They may be also configured as defaults for a {func}`_orm.relationship` using
-the {paramref}`_orm.relationship.lazy` option, e.g.:
+They may be also configured as defaults for a {func}`~sqlalchemy.orm.relationship` using
+the {paramref}`~sqlalchemy.orm.relationship.lazy` option, e.g.:
 
 ```python
 from sqlalchemy.orm import relationship
@@ -585,7 +585,7 @@ class User(Base):
 ```
 
 Each loader strategy object adds some kind of information to the statement that
-will be used later by the {class}`_orm.Session` when it is deciding how various
+will be used later by the {class}`~sqlalchemy.orm.Session` when it is deciding how various
 attributes should be loaded and/or behave when they are accessed.
 
 The sections below will introduce a few of the most prominently used
@@ -595,7 +595,7 @@ loader strategies.
 Two sections in {ref}`loading_toplevel`:
 
 - {ref}`relationship_lazy_option` - details on configuring the strategy
-  on {func}`_orm.relationship`
+  on {func}`~sqlalchemy.orm.relationship`
 - {ref}`relationship_loader_options` - details on using query-time
   loader strategies
 :::
@@ -603,21 +603,21 @@ Two sections in {ref}`loading_toplevel`:
 ### Selectin Load
 
 The most useful loader in modern SQLAlchemy is the
-{func}`_orm.selectinload` loader option.  This option solves the most common
+{func}`~sqlalchemy.orm.selectinload` loader option.  This option solves the most common
 form of the "N plus one" problem which is that of a set of objects that refer
-to related collections.   {func}`_orm.selectinload` will ensure that a particular
+to related collections.   {func}`~sqlalchemy.orm.selectinload` will ensure that a particular
 collection for a full series of objects are loaded up front using a single
 query.   It does this using a SELECT form that in most cases can be emitted
 against the related table alone, without the introduction of JOINs or
 subqueries, and only queries for those parent objects for which the
-collection isn't already loaded.   Below we illustrate {func}`_orm.selectinload`
+collection isn't already loaded.   Below we illustrate {func}`~sqlalchemy.orm.selectinload`
 by loading all of the `User` objects and all of their related `Address`
-objects; while we invoke {meth}`_orm.Session.execute` only once, given a
-{func}`_sql.select` construct, when the database is accessed, there are
+objects; while we invoke {meth}`~sqlalchemy.orm.Session.execute` only once, given a
+{func}`~sqlalchemy.sql.expression.select` construct, when the database is accessed, there are
 in fact two SELECT statements emitted, the second one being to fetch the
 related `Address` objects:
 
-```pycon+sql
+```python
 >>> from sqlalchemy.orm import selectinload
 >>> stmt = (
 ...   select(User).options(selectinload(User.addresses)).order_by(User.id)
@@ -646,20 +646,20 @@ pkrabs  (pearl.krabs@gmail.com, pearl@aol.com)
 
 ### Joined Load
 
-The {func}`_orm.joinedload` eager load strategy is the oldest eager loader in
+The {func}`~sqlalchemy.orm.joinedload` eager load strategy is the oldest eager loader in
 SQLAlchemy, which augments the SELECT statement that's being passed to the
 database with a JOIN (which may be an outer or an inner join depending on options),
 which can then load in related objects.
 
-The {func}`_orm.joinedload` strategy is best suited towards loading
+The {func}`~sqlalchemy.orm.joinedload` strategy is best suited towards loading
 related many-to-one objects, as this only requires that additional columns
 are added to a primary entity row that would be fetched in any case.
-For greater effiency, it also accepts an option {paramref}`_orm.joinedload.innerjoin`
+For greater effiency, it also accepts an option {paramref}`~sqlalchemy.orm.joinedload.innerjoin`
 so that an inner join instead of an outer join may be used for a case such
 as below where we know that all `Address` objects have an associated
 `User`:
 
-```pycon+sql
+```python
 >>> from sqlalchemy.orm import joinedload
 >>> stmt = (
 ...   select(Address).options(joinedload(Address.user, innerjoin=True)).order_by(Address.id)
@@ -679,28 +679,28 @@ pearl.krabs@gmail.com pkrabs
 pearl@aol.com pkrabs
 ```
 
-{func}`_orm.joinedload` also works for collections, meaning one-to-many relationships,
+{func}`~sqlalchemy.orm.joinedload` also works for collections, meaning one-to-many relationships,
 however it has the effect
 of multiplying out primary rows per related item in a recursive way
 that grows the amount of data sent for a result set by orders of magnitude for
 nested collections and/or larger collections, so its use vs. another option
-such as {func}`_orm.selectinload` should be evaluated on a per-case basis.
+such as {func}`~sqlalchemy.orm.selectinload` should be evaluated on a per-case basis.
 
 It's important to note that the WHERE and ORDER BY criteria of the enclosing
-{class}`_sql.Select` statement **do not target the table rendered by
+{class}`~sqlalchemy.sql.expression.Select` statement **do not target the table rendered by
 joinedload()**.   Above, it can be seen in the SQL that an **anonymous alias**
 is applied to the `user_account` table such that is not directly addressable
 in the query.   This concept is discussed in more detail in the section
 {ref}`zen_of_eager_loading`.
 
-The ON clause rendered by {func}`_orm.joinedload` may be affected directly by
-using the {meth}`_orm.PropComparator.and_` method described previously at
-{ref}`tutorial_joining_relationships_augmented`; examples of this technique
-with loader strategies are further below at {ref}`tutorial_loader_strategy_augmented`.
+The ON clause rendered by {func}`~sqlalchemy.orm.joinedload` may be affected directly by
+using the {meth}`~sqlalchemy.orm.PropComparator.and_` method described previously at
+{ref}`sqlatutorial:joining-relationships-augmented`; examples of this technique
+with loader strategies are further below at {ref}`sqlatutorial:loader-strategy-augmented`.
 However, more generally, "joined eager loading" may be applied to a
-{class}`_sql.Select` that uses {meth}`_sql.Select.join` using the approach
+{class}`~sqlalchemy.sql.expression.Select` that uses {meth}`~sqlalchemy.sql.expression.Select.join` using the approach
 described in the next section,
-{ref}`tutorial_orm_loader_strategies_contains_eager`.
+{ref}`sqlatutorial:orm-loader-strategies-contains-eager`.
 
 :::{tip}
 It's important to note that many-to-one eager loads are often not necessary,
@@ -709,30 +709,30 @@ many objects all refer to the same related object, such as many `Address`
 objects that each refer to the same `User`, SQL will be emitted only once
 for that `User` object using normal lazy loading.  The lazy load routine
 will look up the related object by primary key in the current
-{class}`_orm.Session` without emitting any SQL when possible.
+{class}`~sqlalchemy.orm.Session` without emitting any SQL when possible.
 :::
 
 :::{seealso}
 {ref}`joined_eager_loading` - in {ref}`loading_toplevel`
 :::
 
-(tutorial-orm-loader-strategies-contains-eager)=
+(sqlatutorial:orm-loader-strategies-contains-eager)=
 
 ### Explicit Join + Eager load
 
 If we were to load `Address` rows while joining to the `user_account` table
-using a method such as {meth}`_sql.Select.join` to render the JOIN, we could
+using a method such as {meth}`~sqlalchemy.sql.expression.Select.join` to render the JOIN, we could
 also leverage that JOIN in order to eagerly load the contents of the
 `Address.user` attribute on each `Address` object returned.  This is
 essentially that we are using "joined eager loading" but rendering the JOIN
 ourselves.   This common use case is acheived by using the
-{func}`_orm.contains_eager` option. This option is very similar to
-{func}`_orm.joinedload`, except that it assumes we have set up the JOIN
+{func}`~sqlalchemy.orm.contains_eager` option. This option is very similar to
+{func}`~sqlalchemy.orm.joinedload`, except that it assumes we have set up the JOIN
 ourselves, and it instead only indicates that additional columns in the COLUMNS
 clause should be loaded into related attributes on each returned object, for
 example:
 
-```pycon+sql
+```python
 >>> from sqlalchemy.orm import contains_eager
 >>> stmt = (
 ...   select(Address).
@@ -753,7 +753,7 @@ pearl@aol.com pkrabs
 
 Above, we both filtered the rows on `user_account.name` and also loaded
 rows from `user_account` into the `Address.user` attribute of the returned
-rows.   If we had applied {func}`_orm.joinedload` separately, we would get a
+rows.   If we had applied {func}`~sqlalchemy.orm.joinedload` separately, we would get a
 SQL query that unnecessarily joins twice:
 
 ```
@@ -775,23 +775,23 @@ WHERE user_account.name = :name_1 ORDER BY address.id
 Two sections in {ref}`loading_toplevel`:
 
 - {ref}`zen_of_eager_loading` - describes the above problem in detail
-- {ref}`contains_eager` - using {func}`.contains_eager`
+- {ref}`contains_eager` - using {func}`~sqlalchemy.orm.contains_eager`
 :::
 
-(tutorial-loader-strategy-augmented)=
+(sqlatutorial:loader-strategy-augmented)=
 
 ### Augmenting Loader Strategy Paths
 
-In {ref}`tutorial_joining_relationships_augmented` we illustrated how to add
-arbitrary criteria to a JOIN rendered with {func}`_orm.relationship` to also
-include additional criteria in the ON clause.   The {meth}`_orm.PropComparator.and_`
+In {ref}`sqlatutorial:joining-relationships-augmented` we illustrated how to add
+arbitrary criteria to a JOIN rendered with {func}`~sqlalchemy.orm.relationship` to also
+include additional criteria in the ON clause.   The {meth}`~sqlalchemy.orm.PropComparator.and_`
 method is in fact generally available for most loader options.   For example,
 if we wanted to re-load the names of users and their email addresses, but omitting
 the email addresses with the `sqlalchemy.org` domain, we can apply
-{meth}`_orm.PropComparator.and_` to the argument passed to
-{func}`_orm.selectinload` to limit this criteria:
+{meth}`~sqlalchemy.orm.PropComparator.and_` to the argument passed to
+{func}`~sqlalchemy.orm.selectinload` to limit this criteria:
 
-```pycon+sql
+```python
 >>> from sqlalchemy.orm import selectinload
 >>> stmt = (
 ...   select(User).
@@ -829,7 +829,7 @@ A very important thing to note above is that a special option is added with
 effect when rows are being fetched indicates that the loader option we are
 using should **replace** the existing contents of collections on the objects,
 if they are already loaded.  As we are working with a single
-{class}`_orm.Session` repeatedly, the objects we see being loaded above are the
+{class}`~sqlalchemy.orm.Session` repeatedly, the objects we see being loaded above are the
 same Python instances as those that were first persisted at the start of the
 ORM section of this tutorial.
 
@@ -841,16 +841,16 @@ ORM section of this tutorial.
 
 ### Raiseload
 
-One additional loader strategy worth mentioning is {func}`_orm.raiseload`.
+One additional loader strategy worth mentioning is {func}`~sqlalchemy.orm.raiseload`.
 This option is used to completely block an application from having the
 {term}`N plus one` problem at all by causing what would normally be a lazy
 load to raise an error instead.   It has two variants that are controlled via
-the {paramref}`_orm.raiseload.sql_only` option to block either lazy loads
+the {paramref}`~sqlalchemy.orm.raiseload.sql_only` option to block either lazy loads
 that require SQL, versus all "load" operations including those which
-only need to consult the current {class}`_orm.Session`.
+only need to consult the current {class}`~sqlalchemy.orm.Session`.
 
-One way to use {func}`_orm.raiseload` is to configure it on
-{func}`_orm.relationship` itself, by setting {paramref}`_orm.relationship.lazy`
+One way to use {func}`~sqlalchemy.orm.raiseload` is to configure it on
+{func}`~sqlalchemy.orm.relationship` itself, by setting {paramref}`~sqlalchemy.orm.relationship.lazy`
 to the value `"raise_on_sql"`, so that for a particular mapping, a certain
 relationship will never try to emit SQL:
 
@@ -890,7 +890,7 @@ u1 = s.execute(select(User).options(selectinload(User.addresses))).scalars().fir
 The `lazy="raise_on_sql"` option tries to be smart about many-to-one
 relationships as well; above, if the `Address.user` attribute of an
 `Address` object were not loaded, but that `User` object were locally
-present in the same {class}`_orm.Session`, the "raiseload" strategy would not
+present in the same {class}`~sqlalchemy.orm.Session`, the "raiseload" strategy would not
 raise an error.
 
 :::{seealso}

@@ -1,0 +1,4 @@
+sqlalchemy==1.4.22
+myst-parser~=0.15.2
+sphinx-book-theme
+sphinx-design

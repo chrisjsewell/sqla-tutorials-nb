@@ -1,0 +1,59 @@
+div.orm-header {
+    box-shadow: 0px 0px 2px #CCC;
+    padding-top: 1em;
+    padding-bottom: 1px;
+    border-radius: 10px;
+    border-left: 3em solid #E2F3F4;
+    padding-left: 1em;
+    padding-right: 1em;
+    margin-bottom: 2em;
+}
+
+div.orm-header h2 {
+    border-top: none;
+}
+
+div.orm-header>h2,
+div.orm-header>h3 {
+    border: none;
+    padding-top: 0;
+}
+
+div.core-header {
+    box-shadow: 0px 0px 2px #CCC;
+    padding-top: 1em;
+    padding-bottom: 1px;
+    border-radius: 10px;
+    border-right: 3em solid #AECAF7;
+    padding-left: 1em;
+    padding-right: 1em;
+    margin-bottom: 2em;
+}
+
+div.core-header h2 {
+    border-top: none;
+}
+
+div.core-header>h2,
+div.core-header>h3 {
+    border: none;
+    padding-top: 0;
+}
+
+div.orm-dependency {
+    border-left: 1em solid #E2F3F4;
+}
+
+div.orm-addin {
+    box-shadow: 0px 0px 2px #CCC;
+    padding-top: 1em;
+    padding-bottom: 1px;
+    border-radius: 10px;
+    border-left: 1em solid #E2F3F4;
+    padding-left: 10px;
+    margin: 10px 0 10px 0;
+}
+
+div.orm-addin h2 {
+    border-top: none;
+}

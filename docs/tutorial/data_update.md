@@ -1,39 +1,40 @@
-(tutorial-core-update-delete)=
+(sqlatutorial:core-update-delete)=
 
 # Updating and Deleting Rows with Core
 
-So far we've covered {class}`_sql.Insert`, so that we can get some data into
-our database, and then spent a lot of time on {class}`_sql.Select` which
+So far we've covered {class}`~sqlalchemy.sql.expression.Insert`, so that we can get some data into
+our database, and then spent a lot of time on {class}`~sqlalchemy.sql.expression.Select` which
 handles the broad range of usage patterns used for retrieving data from the
-database.   In this section we will cover the {class}`_sql.Update` and
-{class}`_sql.Delete` constructs, which are used to modify existing rows
+database.   In this section we will cover the {class}`~sqlalchemy.sql.expression.Update` and
+{class}`~sqlalchemy.sql.expression.Delete` constructs, which are used to modify existing rows
 as well as delete existing rows.    This section will cover these constructs
 from a Core-centric perspective.
 
-:::{container} orm-header
-**ORM Readers** - As was the case mentioned at {ref}`tutorial_core_insert`,
-the {class}`_sql.Update` and {class}`_sql.Delete` operations when used with
-the ORM are usually invoked internally from the {class}`_orm.Session`
+:::{div} orm-header
+
+**ORM Readers** - As was the case mentioned at {ref}`sqlatutorial:core-insert`,
+the {class}`~sqlalchemy.sql.expression.Update` and {class}`~sqlalchemy.sql.expression.Delete` operations when used with
+the ORM are usually invoked internally from the {class}`~sqlalchemy.orm.Session`
 object as part of the {term}`unit of work` process.
 
-However, unlike {class}`_sql.Insert`, the {class}`_sql.Update` and
-{class}`_sql.Delete` constructs can also be used directly with the ORM,
+However, unlike {class}`~sqlalchemy.sql.expression.Insert`, the {class}`~sqlalchemy.sql.expression.Update` and
+{class}`~sqlalchemy.sql.expression.Delete` constructs can also be used directly with the ORM,
 using a pattern known as "ORM-enabled update and delete"; for this reason,
 familiarity with these constructs is useful for ORM use.  Both styles of
-use are discussed in the sections {ref}`tutorial_orm_updating` and
-{ref}`tutorial_orm_deleting`.
+use are discussed in the sections {ref}`sqlatutorial:orm-updating` and
+{ref}`sqlatutorial:orm-deleting`.
 :::
 
-(tutorial-core-update)=
+(sqlatutorial:core-update)=
 
 ## The update() SQL Expression Construct
 
-The {func}`_sql.update` function generates a new instance of
-{class}`_sql.Update` which represents an UPDATE statement in SQL, that will
+The {func}`~sqlalchemy.sql.expression.update` function generates a new instance of
+{class}`~sqlalchemy.sql.expression.Update` which represents an UPDATE statement in SQL, that will
 update existing data in a table.
 
-Like the {func}`_sql.insert` construct, there is a "traditional" form of
-{func}`_sql.update`, which emits UPDATE against a single table at a time and
+Like the {func}`~sqlalchemy.sql.expression.insert` construct, there is a "traditional" form of
+{func}`~sqlalchemy.sql.expression.update`, which emits UPDATE against a single table at a time and
 does not return any rows.   However some backends support an UPDATE statement
 that may modify multiple tables at once, and the UPDATE statement also
 supports RETURNING such that columns contained in matched rows may be returned
@@ -51,13 +52,13 @@ A basic UPDATE looks like:
 {opensql}UPDATE user_account SET fullname=:fullname WHERE user_account.name = :name_1
 ```
 
-The {meth}`_sql.Update.values` method controls the contents of the SET elements
-of the UPDATE statement.  This is the same method shared by the {class}`_sql.Insert`
+The {meth}`~sqlalchemy.sql.expression.Update.values` method controls the contents of the SET elements
+of the UPDATE statement.  This is the same method shared by the {class}`~sqlalchemy.sql.expression.Insert`
 construct.   Parameters can normally be passed using the column names as
 keyword arguments.
 
 UPDATE supports all the major SQL forms of UPDATE, including updates against expressions,
-where we can make use of {class}`_schema.Column` expressions:
+where we can make use of {class}`~sqlalchemy.schema.Column` expressions:
 
 ```
 >>> stmt = (
@@ -69,11 +70,11 @@ where we can make use of {class}`_schema.Column` expressions:
 ```
 
 To support UPDATE in an "executemany" context, where many parameter sets will
-be invoked against the same statement, the {func}`_sql.bindparam`
+be invoked against the same statement, the {func}`~sqlalchemy.sql.expression.bindparam`
 construct may be used to set up bound parameters; these replace the places
 that literal values would normally go:
 
-```pycon+sql
+```python
 >>> from sqlalchemy import bindparam
 >>> stmt = (
 ...   update(user_table).
@@ -98,12 +99,12 @@ COMMIT{stop}
 
 Other techniques which may be applied to UPDATE include:
 
-(tutorial-correlated-updates)=
+(sqlatutorial:correlated-updates)=
 
 ### Correlated Updates
 
 An UPDATE statement can make use of rows in other tables by using a
-{ref}`correlated subquery <tutorial_scalar_subquery>`.  A subquery may be used
+{ref}`correlated subquery <sqlatutorial:scalar-subquery>`.  A subquery may be used
 anywhere a column expression might be placed:
 
 ```
@@ -122,7 +123,7 @@ WHERE address.user_id = user_account.id ORDER BY address.id
 LIMIT :param_1)
 ```
 
-(tutorial-update-from)=
+(sqlatutorial:update-from)=
 
 ### UPDATE..FROM
 
@@ -144,7 +145,7 @@ WHERE user_account.id = address.user_id AND address.email_address = :email_addre
 ```
 
 There is also a MySQL specific syntax that can UPDATE multiple tables. This
-requires we refer to {class}`_schema.Table` objects in the VALUES clause in
+requires we refer to {class}`~sqlalchemy.schema.Table` objects in the VALUES clause in
 order to refer to additional tables:
 
 ```
@@ -170,7 +171,7 @@ WHERE user_account.id = address.user_id AND address.email_address = %s
 
 Another MySQL-only behavior is that the order of parameters in the SET clause
 of an UPDATE actually impacts the evaluation of each expression.   For this use
-case, the {meth}`_sql.Update.ordered_values` method accepts a sequence of
+case, the {meth}`~sqlalchemy.sql.expression.Update.ordered_values` method accepts a sequence of
 tuples so that this order may be controlled [^id2]:
 
 ```
@@ -188,20 +189,20 @@ tuples so that this order may be controlled [^id2]:
 [^id2]: While Python dictionaries are
     [guaranteed to be insert ordered](https://mail.python.org/pipermail/python-dev/2017-December/151283.html)
     as of Python 3.7, the
-    {meth}`_sql.Update.ordered_values` method still provides an additional
+    {meth}`~sqlalchemy.sql.expression.Update.ordered_values` method still provides an additional
     measure of clarity of intent when it is essential that the SET clause
     of a MySQL UPDATE statement proceed in a specific way.
 
-(tutorial-deletes)=
+(sqlatutorial:deletes)=
 
 ## The delete() SQL Expression Construct
 
-The {func}`_sql.delete` function generates a new instance of
-{class}`_sql.Delete` which represents a DELETE statement in SQL, that will
+The {func}`~sqlalchemy.sql.expression.delete` function generates a new instance of
+{class}`~sqlalchemy.sql.expression.Delete` which represents a DELETE statement in SQL, that will
 delete rows from a table.
 
-The {func}`_sql.delete` statement from an API perspective is very similar to
-that of the {func}`_sql.update` construct, traditionally returning no rows but
+The {func}`~sqlalchemy.sql.expression.delete` statement from an API perspective is very similar to
+that of the {func}`~sqlalchemy.sql.expression.update` construct, traditionally returning no rows but
 allowing for a RETURNING variant on some database backends.
 
 ```
@@ -211,11 +212,11 @@ allowing for a RETURNING variant on some database backends.
 {opensql}DELETE FROM user_account WHERE user_account.name = :name_1
 ```
 
-(tutorial-multi-table-deletes)=
+(sqlatutorial:multi-table-deletes)=
 
 ### Multiple Table Deletes
 
-Like {class}`_sql.Update`, {class}`_sql.Delete` supports the use of correlated
+Like {class}`~sqlalchemy.sql.expression.Update`, {class}`~sqlalchemy.sql.expression.Delete` supports the use of correlated
 subqueries in the WHERE clause as well as backend-specific multiple table
 syntaxes, such as `DELETE FROM..USING` on MySQL:
 
@@ -231,17 +232,17 @@ syntaxes, such as `DELETE FROM..USING` on MySQL:
 WHERE user_account.id = address.user_id AND address.email_address = %s
 ```
 
-(tutorial-update-delete-rowcount)=
+(sqlatutorial:update-delete-rowcount)=
 
 ## Getting Affected Row Count from UPDATE, DELETE
 
-Both {class}`_sql.Update` and {class}`_sql.Delete` support the ability to
+Both {class}`~sqlalchemy.sql.expression.Update` and {class}`~sqlalchemy.sql.expression.Delete` support the ability to
 return the number of rows matched after the statement proceeds, for statements
-that are invoked using Core {class}`_engine.Connection`, i.e.
-{meth}`_engine.Connection.execute`. Per the caveats mentioned below, this value
-is available from the {attr}`_engine.CursorResult.rowcount` attribute:
+that are invoked using Core {class}`~sqlalchemy.engine.Connection`, i.e.
+{meth}`~sqlalchemy.engine.Connection.execute`. Per the caveats mentioned below, this value
+is available from the {attr}`~sqlalchemy.engine.CursorResult.rowcount` attribute:
 
-```pycon+sql
+```python
 >>> with engine.begin() as conn:
 ...     result = conn.execute(
 ...         update(user_table).
@@ -257,29 +258,29 @@ UPDATE user_account SET fullname=? WHERE user_account.name = ?
 ```
 
 :::{tip}
-The {class}`_engine.CursorResult` class is a subclass of
-{class}`_engine.Result` which contains additional attributes that are
+The {class}`~sqlalchemy.engine.CursorResult` class is a subclass of
+{class}`~sqlalchemy.engine.Result` which contains additional attributes that are
 specific to the DBAPI `cursor` object.  An instance of this subclass is
 returned when a statement is invoked via the
-{meth}`_engine.Connection.execute` method. When using the ORM, the
-{meth}`_orm.Session.execute` method returns an object of this type for
+{meth}`~sqlalchemy.engine.Connection.execute` method. When using the ORM, the
+{meth}`~sqlalchemy.orm.Session.execute` method returns an object of this type for
 all INSERT, UPDATE, and DELETE statements.
 :::
 
-Facts about {attr}`_engine.CursorResult.rowcount`:
+Facts about {attr}`~sqlalchemy.engine.CursorResult.rowcount`:
 
 - The value returned is the number of rows **matched** by the WHERE clause of
   the statement.   It does not matter if the row were actually modified or not.
-- {attr}`_engine.CursorResult.rowcount` is not necessarily available for an UPDATE
+- {attr}`~sqlalchemy.engine.CursorResult.rowcount` is not necessarily available for an UPDATE
   or DELETE statement that uses RETURNING.
-- For an {ref}`executemany <tutorial_multiple_parameters>` execution,
-  {attr}`_engine.CursorResult.rowcount` may not be available either, which depends
+- For an {ref}`executemany <sqlatutorial:multiple-parameters>` execution,
+  {attr}`~sqlalchemy.engine.CursorResult.rowcount` may not be available either, which depends
   highly on the DBAPI module in use as well as configured options.  The
-  attribute {attr}`_engine.CursorResult.supports_sane_multi_rowcount` indicates
+  attribute {attr}`~sqlalchemy.engine.CursorResult.supports_sane_multi_rowcount` indicates
   if this value will be available for the current backend in use.
 - Some drivers, particularly third party dialects for non-relational databases,
-  may not support {attr}`_engine.CursorResult.rowcount` at all.   The
-  {attr}`_engine.CursorResult.supports_sane_rowcount` will indicate this.
+  may not support {attr}`~sqlalchemy.engine.CursorResult.rowcount` at all.   The
+  {attr}`~sqlalchemy.engine.CursorResult.supports_sane_rowcount` will indicate this.
 - "rowcount" is used by the ORM {term}`unit of work` process to validate that
   an UPDATE or DELETE statement matched the expected number of rows, and is
   also essential for the ORM versioning feature documented at
@@ -287,12 +288,12 @@ Facts about {attr}`_engine.CursorResult.rowcount`:
 
 ## Using RETURNING with UPDATE, DELETE
 
-Like the {class}`_sql.Insert` construct, {class}`_sql.Update` and {class}`_sql.Delete`
+Like the {class}`~sqlalchemy.sql.expression.Insert` construct, {class}`~sqlalchemy.sql.expression.Update` and {class}`~sqlalchemy.sql.expression.Delete`
 also support the RETURNING clause which is added by using the
-{meth}`_sql.Update.returning` and {meth}`_sql.Delete.returning` methods.
+{meth}`~sqlalchemy.sql.expression.Update.returning` and {meth}`~sqlalchemy.sql.expression.Delete.returning` methods.
 When these methods are used on a backend that supports RETURNING, selected
 columns from all rows that match the WHERE criteria of the statement
-will be returned in the {class}`_engine.Result` object as rows that can
+will be returned in the {class}`~sqlalchemy.engine.Result` object as rows that can
 be iterated:
 
 ```
@@ -321,11 +322,11 @@ RETURNING user_account.id, user_account.name{stop}
 :::{seealso}
 API documentation for UPDATE / DELETE:
 
-- {class}`_sql.Update`
-- {class}`_sql.Delete`
+- {class}`~sqlalchemy.sql.expression.Update`
+- {class}`~sqlalchemy.sql.expression.Delete`
 
 ORM-enabled UPDATE and DELETE:
 
-- {ref}`tutorial_orm_enabled_update`
-- {ref}`tutorial_orm_enabled_delete`
+- {ref}`sqlatutorial:orm-enabled-update`
+- {ref}`sqlatutorial:orm-enabled-delete`
 :::

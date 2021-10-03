@@ -1,9 +1,9 @@
-(tutorial-engine)=
+(sqlatutorial:engine)=
 
 # Establishing Connectivity - the Engine
 
 The start of any SQLAlchemy application is an object called the
-{class}`_future.Engine`.   This object acts as a central source of connections
+{class}`~sqlalchemy.future.Engine`.   This object acts as a central source of connections
 to a particular database, providing both a factory as well as a holding
 space called a {ref}`connection pool <pooling_toplevel>` for these database
 connections.   The engine is typically a global object created just
@@ -12,18 +12,18 @@ which will describe how it should connect to the database host or backend.
 
 For this tutorial we will use an in-memory-only SQLite database. This is an
 easy way to test things without needing to have an actual pre-existing database
-set up.  The {class}`_future.Engine` is created by using {func}`_sa.create_engine`, specifying
-the {paramref}`_sa.create_engine.future` flag set to `True` so that we make full use
+set up.  The {class}`~sqlalchemy.future.Engine` is created by using {func}`~sqlalchemy.future.create_engine`, specifying
+the {paramref}`~sqlalchemy.future.create_engine.future` flag set to `True` so that we make full use
 of {term}`2.0 style` usage:
 
-```pycon+sql
+```python
 >>> from sqlalchemy import create_engine
 >>> engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
 ```
 
-The main argument to {class}`_sa.create_engine`
+The main argument to {func}`~sqlalchemy.future.create_engine`
 is a string URL, above passed as the string `"sqlite+pysqlite:///:memory:"`.
-This string indicates to the {class}`_future.Engine` three important
+This string indicates to the {class}`~sqlalchemy.future.Engine` three important
 facts:
 
 1. What kind of database are we communicating with?   This is the `sqlite`
@@ -42,14 +42,14 @@ facts:
    it need to create new files.
 
 :::{sidebar} Lazy Connecting
-The {class}`_future.Engine`, when first returned by {func}`_sa.create_engine`,
+The {class}`~sqlalchemy.future.Engine`, when first returned by {func}`~sqlalchemy.future.create_engine`,
 has not actually tried to connect to the database yet; that happens
 only the first time it is asked to perform a task against the database.
 This is a software design pattern known as {term}`lazy initialization`.
 :::
 
-We have also specified a parameter {paramref}`_sa.create_engine.echo`, which
-will instruct the {class}`_future.Engine` to log all of the SQL it emits to a
+We have also specified a parameter {paramref}`~sqlalchemy.future.create_engine.echo`, which
+will instruct the {class}`~sqlalchemy.future.Engine` to log all of the SQL it emits to a
 Python logger that will write to standard out.   This flag is a shorthand way
 of setting up
 {ref}`Python logging more formally <dbengine_logging>` and is useful for
