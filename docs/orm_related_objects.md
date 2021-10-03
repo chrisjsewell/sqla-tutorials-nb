@@ -115,7 +115,7 @@ with engine.begin() as conn:
         ]
     )
 
-  
+
 session = Session(engine)
 ```
 
@@ -370,7 +370,7 @@ In the section {ref}`sqlatutorial:orm-entity-aliases` we introduced the
 {func}`~sqlalchemy.orm.aliased` construct, which is used to apply a SQL alias to an
 ORM entity.   When using a {func}`~sqlalchemy.orm.relationship` to help construct SQL JOIN, the
 use case where the target of the join is to be an {func}`~sqlalchemy.orm.aliased` is suited
-by making use of the {meth}`~sqlalchemy.orm.PropComparator.of_type` modifier.    
+by making use of the {meth}`~sqlalchemy.orm.PropComparator.of_type` modifier.
 To demonstrate we will construct the same join illustrated at {ref}`sqlatutorial:orm-entity-aliases` using the {func}`~sqlalchemy.orm.relationship` attributes to join instead:
 
 ```python

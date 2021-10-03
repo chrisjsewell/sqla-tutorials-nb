@@ -1,0 +1,16 @@
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.0.1
+  hooks:
+  - id: end-of-file-fixer
+  - id: mixed-line-ending
+  - id: trailing-whitespace
+  - id: check-yaml
+
+# - repo: https://github.com/executablebooks/mdformat
+#   rev: 0.7.10
+#   hooks:
+#   - id: mdformat
+#     additional_dependencies:
+#     - mdformat-myst
+#     - mdformat-black

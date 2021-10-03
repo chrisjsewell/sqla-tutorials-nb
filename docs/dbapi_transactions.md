@@ -19,11 +19,6 @@ its primary interactive endpoints, the {class}`~sqlalchemy.future.Connection` an
 {class}`~sqlalchemy.engine.Result`.   We will additionally introduce the ORM's
 {term}`facade` for these objects, known as the {class}`~sqlalchemy.orm.Session`.
 
-```{code-cell} ipython3
-from sqlalchemy import create_engine
-engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
-```
-
 :::{div} orm-header
 
 **Note to ORM readers**
@@ -42,11 +37,15 @@ of this section.
 As we have yet to introduce the SQLAlchemy Expression Language that is the
 primary feature of SQLAlchemy, we will make use of one simple construct within
 this package called the {func}`~sqlalchemy.sql.expression.text` construct, which allows us to write
-SQL statements as **textual SQL**.   Rest assured that textual SQL in
-day-to-day SQLAlchemy use is by far the exception rather than the rule for most
-tasks, even though it always remains fully available.
+SQL statements as **textual SQL**.
+Rest assured that textual SQL in day-to-day SQLAlchemy use is by far the exception rather than the rule for most tasks, even though it always remains fully available.
 
-<!-- 
+```{code-cell} ipython3
+from sqlalchemy import create_engine
+engine = create_engine("sqlite+pysqlite:///:memory:", echo=True, future=True)
+```
+
+<!--
 .. rst-class:: core-header
 -->
 
