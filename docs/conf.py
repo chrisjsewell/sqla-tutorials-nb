@@ -5,7 +5,7 @@ project = "SQLAlchemy 1.4/2.0 Tutorial"
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
-extensions = ["myst_nb", "sphinx.ext.intersphinx", "sphinx_copybutton", "sphinx_design"]
+extensions = ["myst_nb", "sphinx.ext.intersphinx", "sphinx_copybutton", "sphinx_design", "sphinx_thebe"]
 
 myst_enable_extensions = ["colon_fence"]
 execution_show_tb = "READTHEDOCS" in os.environ
@@ -17,9 +17,12 @@ intersphinx_mapping = {
 # sphobjinv suggest --url "https://docs.sqlalchemy.org/en/14/objects.inv" Engine
 
 html_theme = "sphinx_book_theme"
+html_title = "1.4/2.0 Tutorial"
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
+html_logo = "_static/logo-square.png"
 html_theme_options = {
+    "home_page_in_toc": True,
     "repository_url": "https://github.com/chrisjsewell/sqla-tutorials-nb",
     "repository_branch": "main",
     "use_repository_button": True,
@@ -30,7 +33,7 @@ html_theme_options = {
         "notebook_interface": "classic",
         "binderhub_url": "https://mybinder.org",
         "jupyterhub_url": "",
-        # "thebe": True,
+        "thebe": True,
         "colab_url": "https://colab.research.google.com",
     },
 }

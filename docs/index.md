@@ -7,11 +7,26 @@ kernelspec:
   display_name: Python 3
   language: python
   name: python3
+sd_hide_title: true
 ---
 
 (unified-tutorial)=
 
 # SQLAlchemy 1.4 / 2.0 Tutorial
+
+::::{grid} 1
+:::{grid-item}
+```{image} ./_static/logo-long.png
+:width: 400px
+:class: sd-m-auto
+```
+:::
+:::{grid-item}
+:class: sd-fs-3 sd-text-center sd-font-weight-bold
+
+Notebook based 1.4 / 2.0 Tutorial
+:::
+::::
 
 :::{admonition} About this document
 The new SQLAlchemy Tutorial is now integrated between Core and ORM and
