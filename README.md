@@ -9,6 +9,9 @@ This content is adapted from <https://github.com/sqlalchemy/sqlalchemy/tree/mast
 - Remove content above top-header in each file
 - Replace inter-sphinx references
 
+## Development
+
+To build the documentation, simply run [tox](https://tox.readthedocs.io/en/latest/).
 
 ## TODO
 

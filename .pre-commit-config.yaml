@@ -12,5 +12,5 @@ repos:
 #   hooks:
 #   - id: mdformat
 #     additional_dependencies:
-#     - mdformat-myst
+#     - mdformat-myst  # TODO this would require the colon-block extension
 #     - mdformat-black

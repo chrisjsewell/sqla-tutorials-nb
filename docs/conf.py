@@ -23,6 +23,7 @@ html_css_files = ["custom.css"]
 html_logo = "_static/logo-square.png"
 html_theme_options = {
     "home_page_in_toc": True,
+    "show_navbar_depth": 2,
     "repository_url": "https://github.com/chrisjsewell/sqla-tutorials-nb",
     "repository_branch": "main",
     "use_repository_button": True,
