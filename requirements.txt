@@ -3,3 +3,4 @@ myst-nb~=0.13.0
 sphinx-book-theme
 sphinx-design
 sphinx-copybutton
+sphinx-thebe
