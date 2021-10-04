@@ -7,6 +7,10 @@ kernelspec:
   display_name: Python 3
   language: python
   name: python3
+language_info:
+  name: python
+  codemirror_mode:
+    name: ipython
 ---
 
 (sqlatutorial:core-insert)=
