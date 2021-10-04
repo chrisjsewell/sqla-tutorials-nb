@@ -11,6 +11,7 @@ language_info:
   name: python
   codemirror_mode:
     name: ipython
+    version: 3
 ---
 
 (sqlatutorial:core-insert)=
