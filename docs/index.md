@@ -9,6 +9,7 @@ kernelspec:
   name: python3
 language_info:
   name: python
+  mimetype: text/x-python
   codemirror_mode:
     name: ipython
     version: 3
